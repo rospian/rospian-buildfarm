@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+ROS_SUBDIR="${ROS_SUBDIR:-ros2_base}"
+WS="${WS:-$SCRIPT_DIR/$ROS_SUBDIR}"
+ROS_DISTRO="${ROS_DISTRO:-jazzy}"
+OS_DIST=trixie
+# REPO_DIST="$OS_DIST-$ROS_DISTRO"
+REPO_DIST="trixie"
+ARCH=arm64
+APTREPO="${APTREPO:-/srv/aptrepo}"
+SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
+SBUILD_DIR="$WS/sbuild"
+mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
+PROGRESS_LOG="$SBUILD_DIR/logs/progress.log"
+rm -f "$PROGRESS_LOG"
+SEQUENCE="$WS/sequence"
+touch $SEQUENCE
+XREFERENCE="$SBUILD_DIR/xreference"
+rm -f $XREFERENCE
+
+cd "$WS"
+
+# List package paths (one per ROS package, even if many live in one repo)
+colcon list --base-paths src --paths-only | sort > $SBUILD_DIR/all_packages
+# Exclude skipped packages
+grep -Fvx -f skip_packages $SBUILD_DIR/all_packages > $SBUILD_DIR/inc_packages
+mapfile -t PKG_PATHS < $SBUILD_DIR/inc_packages
+
+rm -f "$SBUILD_RESULTS/*.build"
+mv -f "$SBUILD_RESULTS"/*.dsc \
+      "$SBUILD_RESULTS"/*.changes \
+      "$SBUILD_RESULTS"/*.deb \
+      "$SBUILD_RESULTS"/*.buildinfo \
+      "$SBUILD_DIR/artifacts" 2>/dev/null || true
+
+pass=1
+retry=1
+
+while [ $retry -eq 1 ]; do
+  echo "===== PASS $pass =====" | tee -a "$PROGRESS_LOG"
+  retry=0
+  index=0
+  build_count=0
+
+  for pkg_path in "${PKG_PATHS[@]}"; do
+    index=$((index + 1))
+
+    pkg_name="$(python3 - "$pkg_path" <<'PY'
+import os, sys, xml.etree.ElementTree as ET
+p=sys.argv[1]
+x=ET.parse(os.path.join(p,'package.xml'))
+print(x.findtext('name').strip())
+PY
+)"
+
+    echo -e "\n== ($index) $pkg_name -- $pkg_path" | tee -a "$PROGRESS_LOG"
+
+    stamp="$SBUILD_DIR/stamps/.built_pkg_${pkg_name}"
+    # if [ -f "$stamp" ]; then
+    #   continue
+    # fi
+
+    pushd "$pkg_path" >/dev/null
+
+    if [ ! -d "debian" ]; then
+      echo -e "== ($index) $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
+      rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
+      if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
+        popd >/dev/null
+        echo "!! $pkg_name: bloom failed (will retry next pass)" | tee -a "$PROGRESS_LOG"
+        retry=1
+        continue
+      fi
+    fi
+
+    # Skip packages already built
+    src_name="$(dpkg-parsechangelog -S Source 2>/dev/null || true)"
+    if [ -f "$stamp" ] && [ -f "$SBUILD_DIR/built/.$src_name" ]; then
+      popd >/dev/null
+      echo "$src_name $pkg_name $pkg_path" >> $XREFERENCE
+      continue
+    fi
+    rm -f $stamp
+    rm -f "$SBUILD_DIR/built/.$src_name"
+
+    # Identifiy ros-jazzy-* dependencies
+    deps=$(awk '
+      BEGIN{inbd=0}
+      /^Build-Depends:/ {
+        inbd=1
+        sub(/^Build-Depends:[[:space:]]*/, "")
+        print
+        next
+      }
+      inbd && /^[[:space:]]/ {
+        print
+        next
+      }
+      inbd && !/^[[:space:]]/ {
+        exit
+      }
+    ' debian/control \
+    | tr ',|' '\n' \
+    | sed 's/([^)]*)//g' \
+    | awk '{print $1}' \
+    | grep -E '^ros-jazzy-' || true \
+    | sort -u)
+    for dep in $deps;do
+      if [ ! -f "$SBUILD_DIR/built/.$dep" ]; then
+        popd >/dev/null
+        echo "!! $pkg_name: $dep is missing (will retry next pass)" | tee -a "$PROGRESS_LOG"
+        retry=1
+        continue 2
+      fi  
+    done  
+
+    # Patch debian rules for Python path
+    if [ -f "debian/rules" ]; then
+      # Fix 1: Replace setup.sh sourcing with PYTHONPATH export
+      sed -i 's|if \[ -f "/opt/ros/jazzy/setup.sh" \]; then \. "/opt/ros/jazzy/setup.sh"; fi && \\|export PYTHONPATH="/opt/ros/jazzy/lib/python3.13/site-packages:$$PYTHONPATH" \&\& \\|' "debian/rules"
+      # Fix 2: Add /usr to CMAKE_PREFIX_PATH
+      sed -i 's|-DCMAKE_PREFIX_PATH="/opt/ros/jazzy"|-DCMAKE_PREFIX_PATH="/opt/ros/jazzy;/usr"|' "debian/rules"    
+      # Fix 3: Add /usr to AMENT_PREFIX_PATH
+      sed -i 's|-DAMENT_PREFIX_PATH="/opt/ros/jazzy"|-DAMENT_PREFIX_PATH="/opt/ros/jazzy;/usr"|' "debian/rules"
+    fi
+
+    # Normalize changelog to a minimal valid stanza
+    changelog="debian/changelog"
+    first_line="$(head -n1 "$changelog")"
+    src="$(echo "$first_line" | awk '{print $1}')"
+    ver="$(echo "$first_line" | sed -n 's/^[^(]*(\([^)]*\)).*$/\1/p')"
+    dist="$(echo "$first_line" | awk '{print $3}' | sed 's/;$//')"
+
+    trailer="$(grep -m1 -E '^\s*-- ' "$changelog" || true)"
+    if [ -z "$trailer" ]; then
+      trailer=" -- $(dpkg-parsechangelog -S Maintainer 2>/dev/null || echo "Unknown <unknown@unknown>")  $(date -R)"
+    fi
+
+    cat > "$changelog" <<EOF
+$src ($ver) $dist; urgency=medium
+
+  * Automated release.
+
+$trailer
+EOF
+
+    # Lintian overrides per binary package
+    binary_pkgs=$(awk '/^Package: /{print $2}' debian/control)
+    for p in $binary_pkgs; do
+      cat > "debian/${p}.lintian-overrides" <<EOF
+$p: dir-or-file-in-opt opt/ros/
+$p: dir-or-file-in-opt opt/ros/jazzy/
+$p: dir-or-file-in-opt opt/ros/jazzy/share/
+EOF
+    done
+
+    # Determine Debian source package name/version from debian/changelog
+    # src_name="$(dpkg-parsechangelog -S Source 2>/dev/null || true)"
+    src_ver_full="$(dpkg-parsechangelog -S Version 2>/dev/null || true)"
+    src_ver="${src_ver_full%%-*}"   # upstream version part before Debian revision
+
+    if [ -z "$src_name" ] || [ -z "$src_ver" ] || [ -z "$src_ver_full" ]; then
+      popd >/dev/null
+      echo "!! $pkg_name: couldn't parse Source/Version from debian/changelog" | tee -a "$PROGRESS_LOG"
+      retry=1
+      continue
+    fi
+
+    orig="../${src_name}_${src_ver}.orig.tar.xz"
+    if [ ! -f "$orig" ]; then
+      echo "== $pkg_name: creating missing orig tarball: $orig" | tee -a "$PROGRESS_LOG"
+      tar --exclude-vcs --exclude='./debian' -cJf "$orig" .
+    fi
+
+    # Build a source package WITHOUT checking build-deps (keeps host clean)
+    echo "== $pkg_name: dpkg-source -b (no build-dep check)" | tee -a "$PROGRESS_LOG"
+    if ! dpkg-source -b . > "$WS/dpkg-source.log" 2>&1; then
+      popd >/dev/null
+      cat "$WS/dpkg-source.log" >> "$PROGRESS_LOG"
+      echo "!! $pkg_name: dpkg-source failed (will retry next pass)" | tee -a "$PROGRESS_LOG"
+      retry=1
+      continue
+    fi
+    popd >/dev/null
+
+    dsc="$(dirname "$pkg_path")/${src_name}_${src_ver_full}.dsc"
+    if [ ! -f "$dsc" ]; then
+      echo "!! $pkg_name: expected .dsc not found: $dsc" | tee -a "$PROGRESS_LOG"
+      retry=1
+      continue
+    fi
+
+    echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH $dsc in $(pwd)" | tee -a "$PROGRESS_LOG"
+    if ! DEB_BUILD_OPTIONS=nocheck sbuild --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
+      lastLog=$(ls -tp . | grep -v '/$' | head -n 1)
+      echo "!! $pkg_name: sbuild failed (likely missing deps); retrying in later pass" | tee -a "$PROGRESS_LOG"
+      echo "!! $pkg_name: see log $WS/$lastLog" | tee -a "$PROGRESS_LOG"
+      retry=1
+      continue
+    fi
+
+    # Publish the newest .changes from sbuild results (safer than scraping .deb paths)
+    changes="$(ls -1t "$SBUILD_RESULTS"/*.changes 2>/dev/null | head -n 1 || true)"
+    if [ -n "$changes" ]; then
+      echo "== $pkg_name: publish via .changes: $changes" | tee -a "$PROGRESS_LOG"
+      reprepro -b "$APTREPO" remove "$REPO_DIST" "$src_name" || true
+      reprepro -b "$APTREPO" deleteunreferenced
+      reprepro -b "$APTREPO" include "$REPO_DIST" "$changes"
+      reprepro -b "$APTREPO" export
+      sudo apt update
+      sudo sbuild-update -ucar trixie-arm64-sbuild
+      touch "$SBUILD_DIR/built/.$src_name"
+      touch "$stamp"
+      mv -f "$SBUILD_RESULTS/$src_name*.build"  "$SBUILD_DIR/logs" 2>/dev/null || true
+    else
+      echo "!! $pkg_name: no .changes found in $SBUILD_RESULTS (nothing to publish?)" | tee -a "$PROGRESS_LOG"
+      retry=1
+      continue
+    fi
+
+    # Stash artifacts from the *workspace parent* (where dpkg-source writes them)
+    echo "== $pkg_name: stash artifacts from $(dirname "$pkg_path")" | tee -a "$PROGRESS_LOG"
+    mv -f "$SBUILD_RESULTS"/*.dsc \
+          "$SBUILD_RESULTS"/*.changes \
+          "$SBUILD_RESULTS"/*.deb \
+          "$SBUILD_RESULTS"/*.buildinfo \
+          "$SBUILD_DIR/artifacts" 2>/dev/null || true
+
+    build_count=$((build_count + 1))
+    echo $pkg_name >> $SEQUENCE
+    echo "== $pkg_name: DONE" | tee -a "$PROGRESS_LOG"
+  done
+
+  echo "Built $build_count packages" | tee -a "$PROGRESS_LOG"
+  if [ $build_count == 0 ];then
+    break
+  fi
+
+  pass=$((pass + 1))
+
+done
+
+echo "===== Finished in $pass passes =====" | tee -a "$PROGRESS_LOG"
