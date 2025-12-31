@@ -229,6 +229,39 @@ sudo chmod -R 2775 /var/log/sbuild
 
 ---
 
+### 3.5 Speed up downloads with apt-cacher-ng (optional)
+
+Install a cache on the host:
+
+```bash
+sudo apt install apt-cacher-ng
+```
+
+Allow localhost (or your subnet) in `/etc/apt-cacher-ng/acng.conf` via `AllowedHosts`, then restart:
+
+```bash
+sudo systemctl restart apt-cacher-ng
+```
+
+Point sbuild to the proxy (per-user):
+
+```bash
+mkdir -p ~/.config/sbuild
+cat >> ~/.config/sbuild/config.pl <<'EOF'
+$apt_cacher = "http://127.0.0.1:3142";
+EOF
+```
+
+Warm the cache once:
+
+```bash
+sudo sbuild-update -ucar trixie-arm64-sbuild --update
+```
+
+Check hits/misses at `http://127.0.0.1:3142/acng-report.html`.
+
+---
+
 ## 4. Configure rosdep for Debian Trixie
 
 Copy:
