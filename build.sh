@@ -15,7 +15,8 @@ SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
 SBUILD_DIR="$WS/sbuild"
 TARGET_PKG="${1:-}"
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
-PROGRESS_LOG="$SBUILD_DIR/logs/progress.log"
+timestamp="$(date -u +%Y%m%d_%H%M%S)"
+PROGRESS_LOG="$SBUILD_DIR/logs/progress_${timestamp}.log"
 rm -f "$PROGRESS_LOG"
 SEQUENCE="$WS/sequence"
 touch $SEQUENCE
@@ -37,7 +38,6 @@ else
   mapfile -t PKG_PATHS < $SBUILD_DIR/inc_packages
 fi
 
-# rm -f "$SBUILD_RESULTS"/*.build
 mv -f "$SBUILD_RESULTS"/*.dsc \
       "$SBUILD_RESULTS"/*.changes \
       "$SBUILD_RESULTS"/*.deb \
@@ -214,9 +214,7 @@ EOF
     echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH $dsc" | tee -a "$PROGRESS_LOG"
     if ! DEB_BUILD_OPTIONS=nocheck sbuild --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
       buildLog="${src_name}_${src_ver_full}_${ARCH}.build"
-      lastLog=$(ls -tp . | grep -v '/$' | head -n 1)
       echo "!! $pkg_name: sbuild failed (likely missing deps); retrying in later pass" | tee -a "$PROGRESS_LOG"
-      echo "!! $pkg_name: see log $WS/$lastLog" | tee -a "$PROGRESS_LOG"
       echo "!! $pkg_name: see log $WS/$buildLog" | tee -a "$PROGRESS_LOG"
       retry=1
       continue
@@ -243,7 +241,6 @@ EOF
 
     # Stash artifacts from the *workspace parent* (where dpkg-source writes them)
     echo "== $pkg_name: stash artifacts from $(dirname "$pkg_path")" | tee -a "$PROGRESS_LOG"
-    mv -f "$SBUILD_RESULTS"/*.build "$SBUILD_DIR/logs" 2>/dev/null || true
     mv -f "$SBUILD_RESULTS"/*.dsc \
           "$SBUILD_RESULTS"/*.changes \
           "$SBUILD_RESULTS"/*.deb \

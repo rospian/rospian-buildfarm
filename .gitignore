@@ -1,0 +1,6 @@
+**/src/**
+**/sbuild/**
+**/*.build
+**/log
+nohup.out
+dpkg-source.log
