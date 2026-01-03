@@ -105,7 +105,7 @@ PY
     pushd "$pkg_path" >/dev/null
 
     bloom_generated=0
-    if [ ! -d "debian" ]; then
+    if [ ! -d "debian" ] || [ $force_build -eq 1 ]; then
       rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
       if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
         popd >/dev/null
@@ -114,7 +114,7 @@ PY
         continue
       fi
       bloom_generated=1
-      
+
       # Apply patches for ros-jazzy packaging
       $WS/patches.sh "$pkg_path"
 
@@ -185,12 +185,16 @@ PY
       # sed -i 's|-DAMENT_PREFIX_PATH="/opt/ros/jazzy"|-DAMENT_PREFIX_PATH="/opt/ros/jazzy;/usr"|' "debian/rules"
     fi
 
-    # Normalize changelog to a minimal valid stanza
+    # Normalize changelog to a minimal valid stanza with unique timestamp version
     changelog="debian/changelog"
     first_line="$(head -n1 "$changelog")"
     src="$(echo "$first_line" | awk '{print $1}')"
     ver="$(echo "$first_line" | sed -n 's/^[^(]*(\([^)]*\)).*$/\1/p')"
     dist="$(echo "$first_line" | awk '{print $3}' | sed 's/;$//')"
+
+    # Add timestamp to version to ensure uniqueness
+    build_timestamp="$(date -u +%Y%m%d%H%M%S)"
+    ver_with_timestamp="${ver}+${build_timestamp}"
 
     trailer="$(grep -m1 -E '^\s*-- ' "$changelog" || true)"
     if [ -z "$trailer" ]; then
@@ -198,7 +202,7 @@ PY
     fi
 
     cat > "$changelog" <<EOF
-$src ($ver) $dist; urgency=medium
+$src ($ver_with_timestamp) $dist; urgency=medium
 
   * Automated release.
 
@@ -216,9 +220,6 @@ $p: dir-or-file-in-opt opt/ros/jazzy/share/
 EOF
       fi
     done
-
-    # Increment build version
-    DEBEMAIL="builder@localhost" DEBFULLNAME="ROS2 Builder" dch -l +build "ROS2 build"
 
     # Determine Debian source package name/version from debian/changelog
     src_ver_full="$(dpkg-parsechangelog -S Version 2>/dev/null || true)"
@@ -303,7 +304,10 @@ EOF
           "$SBUILD_DIR/artifacts" 2>/dev/null || true
 
     build_count=$((build_count + 1))
-    echo $pkg_name >> $SEQUENCE
+    # Only append to sequence if not already present
+    if ! grep -Fxq "$pkg_name" "$SEQUENCE" 2>/dev/null; then
+      echo $pkg_name >> $SEQUENCE
+    fi
     echo "== $pkg_name: DONE" | tee -a "$PROGRESS_LOG"
   done
 
