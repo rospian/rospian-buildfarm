@@ -13,6 +13,8 @@ ARCH=arm64
 APTREPO="${APTREPO:-/srv/aptrepo}"
 SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
 SBUILD_DIR="$WS/sbuild"
+SBUILD_CHROOT="${SBUILD_CHROOT:-trixie-arm64-sbuild}"
+SOURCE_CHROOT="source:${SBUILD_CHROOT}"
 TARGET_PKG="${1:-}"
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
@@ -25,6 +27,33 @@ rm -f $XREFERENCE
 force_build=0
 
 cd "$WS"
+
+cleanup_pytest_cache() {
+  sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- \
+    find /opt/ros/jazzy/lib/python3.13/site-packages -path '*/.pytest_cache' -prune -exec rm -rf {} + || true
+}
+
+# # Ensure the source chroot has the rosidl stack and tooling we need.
+# chroot_update_stack() {
+#   sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- apt-get update
+#   if ! sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- \
+#     apt-get -o Dpkg::Options::="--force-overwrite" install -y \
+#       dose-distcheck \
+#       ros-jazzy-rosidl-cmake \
+#       ros-jazzy-rosidl-generator-c \
+#       ros-jazzy-rosidl-generator-cpp \
+#       ros-jazzy-rosidl-generator-type-description \
+#       ros-jazzy-rosidl-adapter \
+#       ros-jazzy-rosidl-parser \
+#       ros-jazzy-rosidl-cli \
+#       ros-jazzy-rosidl-pycommon \
+#       ros-jazzy-rpyutils
+#   then
+#     echo "!! chroot_update_stack: rosidl stack not (yet) in $APTREPO; continuing without preinstall" >&2
+#   fi
+# }
+
+# chroot_update_stack
 
 if [ -n "$TARGET_PKG" ]; then
   # Limit to the requested package name
@@ -83,6 +112,8 @@ PY
         continue
       fi
       bloom_generated=1
+      # Apply patches for ros-jazzy packaging
+      $WS/patches.sh "$pkg_path"
     fi
 
     # Identify debian package name
@@ -168,15 +199,19 @@ EOF
     # Lintian overrides per binary package
     binary_pkgs=$(awk '/^Package: /{print $2}' debian/control)
     for p in $binary_pkgs; do
-      cat > "debian/${p}.lintian-overrides" <<EOF
+      if [ ! -f "debian/${p}.lintian-overrides" ]; then
+        cat > "debian/${p}.lintian-overrides" <<EOF
 $p: dir-or-file-in-opt opt/ros/
 $p: dir-or-file-in-opt opt/ros/jazzy/
 $p: dir-or-file-in-opt opt/ros/jazzy/share/
 EOF
+      fi
     done
 
+    # Increment build version
+    DEBEMAIL="builder@localhost" DEBFULLNAME="ROS2 Builder" dch -l +build "ROS2 build"
+
     # Determine Debian source package name/version from debian/changelog
-    # src_name="$(dpkg-parsechangelog -S Source 2>/dev/null || true)"
     src_ver_full="$(dpkg-parsechangelog -S Version 2>/dev/null || true)"
     src_ver="${src_ver_full%%-*}"   # upstream version part before Debian revision
 
@@ -188,10 +223,8 @@ EOF
     fi
 
     orig="../${src_name}_${src_ver}.orig.tar.xz"
-    if [ ! -f "$orig" ]; then
-      echo "== $pkg_name: creating missing orig tarball: $orig" | tee -a "$PROGRESS_LOG"
-      tar --exclude-vcs --exclude='./debian' -cJf "$orig" .
-    fi
+    echo "== $pkg_name: creating orig tarball: $orig" | tee -a "$PROGRESS_LOG"
+    tar --exclude-vcs --exclude='./debian' -cJf "$orig" .
 
     # Build a source package WITHOUT checking build-deps (keeps host clean)
     echo "== $pkg_name: dpkg-source -b (no build-dep check)" | tee -a "$PROGRESS_LOG"
@@ -211,9 +244,15 @@ EOF
       continue
     fi
 
+    # Ensure shared prefix is clean before sbuild installs build-deps
+    cleanup_pytest_cache
+
+    # Remove old build logs for this package
+    rm -f "$WS/${src_name}_${src_ver}_"*.build
+
     echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH $dsc" | tee -a "$PROGRESS_LOG"
-    if ! DEB_BUILD_OPTIONS=nocheck sbuild --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
-      buildLog="${src_name}_${src_ver_full}_${ARCH}.build"
+    buildLog="${src_name}_${src_ver_full}_${ARCH}.build"
+    if ! DEB_BUILD_OPTIONS=nocheck sbuild --purge-deps=always --force-orig-source --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
       echo "!! $pkg_name: sbuild failed (likely missing deps); retrying in later pass" | tee -a "$PROGRESS_LOG"
       echo "!! $pkg_name: see log $WS/$buildLog" | tee -a "$PROGRESS_LOG"
       retry=1
@@ -232,7 +271,7 @@ EOF
       sudo sbuild-update -ucar trixie-arm64-sbuild
       touch "$SBUILD_DIR/built/.$src_name"
       touch "$stamp"
-      mv -f "$SBUILD_RESULTS/$src_name*.build"  "$SBUILD_DIR/logs" 2>/dev/null || true
+      mv -f $buildLog  "$SBUILD_DIR/logs" 2>/dev/null || true
     else
       echo "!! $pkg_name: no .changes found in $SBUILD_RESULTS (nothing to publish?)" | tee -a "$PROGRESS_LOG"
       retry=1
@@ -241,9 +280,8 @@ EOF
 
     # Stash artifacts from the *workspace parent* (where dpkg-source writes them)
     echo "== $pkg_name: stash artifacts from $(dirname "$pkg_path")" | tee -a "$PROGRESS_LOG"
-    mv -f "$SBUILD_RESULTS"/*.dsc \
+    mv -f "$SBUILD_RESULTS"/*.deb \
           "$SBUILD_RESULTS"/*.changes \
-          "$SBUILD_RESULTS"/*.deb \
           "$SBUILD_RESULTS"/*.buildinfo \
           "$SBUILD_DIR/artifacts" 2>/dev/null || true
 
