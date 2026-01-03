@@ -65,6 +65,8 @@ else
   # Exclude skipped packages
   grep -Fvx -f skip_packages $SBUILD_DIR/all_packages > $SBUILD_DIR/inc_packages
   mapfile -t PKG_PATHS < $SBUILD_DIR/inc_packages
+  # Remove old progress logs
+  rm -f "$SBUILD_DIR/logs/progress_"*.log
 fi
 
 mv -f "$SBUILD_RESULTS"/*.dsc \
@@ -222,7 +224,15 @@ EOF
       continue
     fi
 
+    # Remove old build artifacts for this package
     orig="../${src_name}_${src_ver}.orig.tar.xz"
+    rm -f ../"${src_name}_${src_ver}"*.dsc
+    rm -f ../"${src_name}_${src_ver}"*.debian.tar.xz
+    rm -f ../"${src_name}_${src_ver}"*.deb
+    rm -f ../"${src_name}_${src_ver}"*.ddeb
+    rm -f ../"${src_name}_${src_ver}"*.changes
+    rm -f ../"${src_name}_${src_ver}"*.buildinfo
+
     echo "== $pkg_name: creating orig tarball: $orig" | tee -a "$PROGRESS_LOG"
     tar --exclude-vcs --exclude='./debian' -cJf "$orig" .
 
@@ -248,7 +258,7 @@ EOF
     cleanup_pytest_cache
 
     # Remove old build logs for this package
-    rm -f "$WS/${src_name}_${src_ver}_"*.build
+    rm -f "$WS/${src_name}_${src_ver}"*.build
 
     echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH $dsc" | tee -a "$PROGRESS_LOG"
     buildLog="${src_name}_${src_ver_full}_${ARCH}.build"
