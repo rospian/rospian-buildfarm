@@ -114,8 +114,15 @@ PY
         continue
       fi
       bloom_generated=1
+      
       # Apply patches for ros-jazzy packaging
       $WS/patches.sh "$pkg_path"
+
+      # Copy patched files from patches directory if they exist
+      if [ -d "$WS/patches/$pkg_path" ]; then
+        echo "== $pkg_name: applying file patches from patches/$pkg_path" | tee -a "$PROGRESS_LOG"
+        cp -r "$WS/patches/$pkg_path"/* "$WS/$pkg_path/"
+      fi
     fi
 
     # Identify debian package name

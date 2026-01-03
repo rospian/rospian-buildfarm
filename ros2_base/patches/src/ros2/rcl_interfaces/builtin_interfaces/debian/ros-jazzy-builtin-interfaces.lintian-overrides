@@ -1,0 +1,13 @@
+ros-jazzy-builtin-interfaces: dir-or-file-in-opt opt/ros/
+ros-jazzy-builtin-interfaces: dir-or-file-in-opt opt/ros/jazzy/
+ros-jazzy-builtin-interfaces: dir-or-file-in-opt opt/ros/jazzy/share/
+ros-jazzy-builtin-interfaces: dir-or-file-in-opt opt/ros/jazzy/share/builtin_interfaces/
+ros-jazzy-builtin-interfaces: dir-or-file-in-opt opt/ros/jazzy/share/builtin_interfaces/package.xml
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_c.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_cpp.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/python3.13/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_c.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/python3.13/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.so
+ros-jazzy-builtin-interfaces: library-not-linked-against-libc opt/ros/jazzy/lib/python3.13/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_introspection_c.so
+ros-jazzy-builtin-interfaces: extended-description-is-empty
