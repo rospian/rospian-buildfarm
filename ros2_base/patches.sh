@@ -82,6 +82,30 @@ Provides: rosidl-cmake' \
     $WS/src/ros2/rosidl/rosidl_cmake/debian/control
 fi
 
+if [ $PKG_PATH == "src/ros2/rosidl/rosidl_generator_c" ]; then
+  # Make ros-jazzy-rosidl-generator-c replace the Debian system rosidl-generator-c-cpp package
+  # to ensure our newer version (with updated templates) is used
+  sed -i '/^Depends:/a\
+Conflicts: rosidl-generator-c-cpp\
+Replaces: rosidl-generator-c-cpp\
+Provides: rosidl-generator-c-cpp' \
+    $WS/src/ros2/rosidl/rosidl_generator_c/debian/control
+  # Replace librosidl-typesupport-interface-dev dependency with ros-jazzy-rosidl-typesupport-interface
+  sed -i 's/librosidl-typesupport-interface-dev/ros-jazzy-rosidl-typesupport-interface/' \
+    $WS/src/ros2/rosidl/rosidl_generator_c/debian/control
+fi
+
+if [ $PKG_PATH == "src/ros2/rosidl/rosidl_typesupport_interface" ]; then
+  # Make ros-jazzy-rosidl-typesupport-interface replace the Debian librosidl-typesupport-interface-dev package
+  # to ensure our newer version (with updated macros for service event messages) is used
+  sed -i '/^Depends:/a\
+Conflicts: librosidl-typesupport-interface-dev\
+Replaces: librosidl-typesupport-interface-dev\
+Provides: librosidl-typesupport-interface-dev' \
+    $WS/src/ros2/rosidl/rosidl_typesupport_interface/debian/control
+fi
+
+
 if [ $PKG_PATH == "src/ros2/common_interfaces/actionlib_msgs" ]; then
   # Add explicit dependencies on ros-jazzy-rosidl stack and ros-jazzy-std-msgs to avoid using outdated Debian packages
   sed -i 's/ros-std-msgs$/&,/' \
@@ -123,6 +147,34 @@ Provides: libstd-msgs-dev, python3-std-msgs, ros-std-msgs' \
     $WS/src/ros2/common_interfaces/std_msgs/debian/control
 fi
 
+if [ $PKG_PATH == "src/ros2/common_interfaces/geometry_msgs" ]; then
+  # Make ros-jazzy-geometry-msgs replace the Debian ROS 1 geometry_msgs packages
+  sed -i '/^Depends:/a\
+Conflicts: libgeometry-msgs-dev, python3-geometry-msgs, ros-geometry-msgs\
+Replaces: libgeometry-msgs-dev, python3-geometry-msgs, ros-geometry-msgs\
+Provides: libgeometry-msgs-dev, python3-geometry-msgs, ros-geometry-msgs' \
+    $WS/src/ros2/common_interfaces/geometry_msgs/debian/control
+  # Remove Debian ROS 1 std_msgs package names and replace ros-std-msgs with ros-jazzy-std-msgs
+  sed -i 's/, libstd-msgs-dev, python3-std-msgs//g' \
+    $WS/src/ros2/common_interfaces/geometry_msgs/debian/control
+  sed -i 's/ros-std-msgs/ros-jazzy-std-msgs/g' \
+    $WS/src/ros2/common_interfaces/geometry_msgs/debian/control
+fi
+
+if [ $PKG_PATH == "src/ros2/common_interfaces/sensor_msgs" ]; then
+  # Make ros-jazzy-sensor-msgs replace the Debian ROS 1 sensor_msgs packages
+  sed -i '/^Depends:/a\
+Conflicts: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs\
+Replaces: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs\
+Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
+    $WS/src/ros2/common_interfaces/sensor_msgs/debian/control
+  # Replace Debian ROS 1 message packages with ros-jazzy-* in both Build-Depends and Depends
+  sed -i 's/libgeometry-msgs-dev, libstd-msgs-dev, python3-geometry-msgs, python3-std-msgs, ros-geometry-msgs/ros-jazzy-geometry-msgs/g' \
+    $WS/src/ros2/common_interfaces/sensor_msgs/debian/control
+  sed -i 's/ros-std-msgs/ros-jazzy-std-msgs/g' \
+    $WS/src/ros2/common_interfaces/sensor_msgs/debian/control
+fi
+
 #
 # Universal patch: Apply to any package with rosidl_default_generators that wasn't already patched above
 #
@@ -134,11 +186,24 @@ if [ -f "$WS/$PKG_PATH/debian/control" ]; then
       # Replace ros-jazzy-rosidl-default-generators with itself plus all the versioned dependencies
       sed -i 's/ros-jazzy-rosidl-default-generators/&, ros-jazzy-rosidl-cmake (>= 4.6.7), ros-jazzy-rosidl-generator-c (>= 4.6.7), ros-jazzy-rosidl-generator-cpp (>= 4.6.7), ros-jazzy-rosidl-generator-type-description (>= 4.6.7), ros-jazzy-rosidl-adapter (>= 4.6.7), ros-jazzy-rosidl-parser (>= 4.6.7), ros-jazzy-rosidl-pycommon (>= 4.6.7), ros-jazzy-rosidl-cli (>= 4.6.7), ros-jazzy-rpyutils (>= 0.4.2)/' "$WS/$PKG_PATH/debian/control"
 
-      # If package depends on std_msgs, replace ros-std-msgs with ros-jazzy-std-msgs
-      if grep -q "ros-std-msgs" "$WS/$PKG_PATH/debian/control" 2>/dev/null; then
-        # Replace first occurrence of ros-std-msgs with ros-jazzy-std-msgs in Build-Depends
-        sed -i '0,/ros-std-msgs/{s/ros-std-msgs/ros-jazzy-std-msgs/}' "$WS/$PKG_PATH/debian/control"
-      fi
+      # Remove Debian ROS 1 message package names (lib*-msgs-dev, python3-*-msgs) from Build-Depends and Depends
+      # This prevents apt from installing Debian's old ROS 1 message packages
+      sed -i 's/, libgeometry-msgs-dev, python3-geometry-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libsensor-msgs-dev, python3-sensor-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libstd-msgs-dev, python3-std-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libnav-msgs-dev, python3-nav-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libshape-msgs-dev, python3-shape-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libstereo-msgs-dev, python3-stereo-msgs//g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/, libtrajectory-msgs-dev, python3-trajectory-msgs//g' "$WS/$PKG_PATH/debian/control"
+
+      # Replace ALL ros-*-msgs (ROS 1) with ros-jazzy-*-msgs (ROS 2) in both Build-Depends and Depends
+      sed -i 's/ros-geometry-msgs/ros-jazzy-geometry-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-sensor-msgs/ros-jazzy-sensor-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-std-msgs/ros-jazzy-std-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-nav-msgs/ros-jazzy-nav-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-shape-msgs/ros-jazzy-shape-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-stereo-msgs/ros-jazzy-stereo-msgs/g' "$WS/$PKG_PATH/debian/control"
+      sed -i 's/ros-trajectory-msgs/ros-jazzy-trajectory-msgs/g' "$WS/$PKG_PATH/debian/control"
     fi
   fi
 fi
