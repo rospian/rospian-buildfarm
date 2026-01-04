@@ -18,13 +18,12 @@ SOURCE_CHROOT="source:${SBUILD_CHROOT}"
 TARGET_PKG="${1:-}"
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
-PROGRESS_LOG="$SBUILD_DIR/logs/progress_${timestamp}.log"
-rm -f "$PROGRESS_LOG"
 SEQUENCE="$WS/sequence"
 touch $SEQUENCE
 XREFERENCE="$SBUILD_DIR/xreference"
-rm -f $XREFERENCE
 force_build=0
+# Always force bloom generation on first run to ensure patches are applied
+force_bloom=1
 
 cd "$WS"
 
@@ -32,28 +31,6 @@ cleanup_pytest_cache() {
   sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- \
     find /opt/ros/jazzy/lib/python3.13/site-packages -path '*/.pytest_cache' -prune -exec rm -rf {} + || true
 }
-
-# # Ensure the source chroot has the rosidl stack and tooling we need.
-# chroot_update_stack() {
-#   sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- apt-get update
-#   if ! sudo schroot -c "$SOURCE_CHROOT" -u root --directory / -- \
-#     apt-get -o Dpkg::Options::="--force-overwrite" install -y \
-#       dose-distcheck \
-#       ros-jazzy-rosidl-cmake \
-#       ros-jazzy-rosidl-generator-c \
-#       ros-jazzy-rosidl-generator-cpp \
-#       ros-jazzy-rosidl-generator-type-description \
-#       ros-jazzy-rosidl-adapter \
-#       ros-jazzy-rosidl-parser \
-#       ros-jazzy-rosidl-cli \
-#       ros-jazzy-rosidl-pycommon \
-#       ros-jazzy-rpyutils
-#   then
-#     echo "!! chroot_update_stack: rosidl stack not (yet) in $APTREPO; continuing without preinstall" >&2
-#   fi
-# }
-
-# chroot_update_stack
 
 if [ -n "$TARGET_PKG" ]; then
   # Limit to the requested package name
@@ -79,6 +56,7 @@ pass=1
 retry=1
 
 while [ $retry -eq 1 ]; do
+  PROGRESS_LOG="$SBUILD_DIR/logs/progress_${timestamp}_${pass}.log"
   echo "===== PASS $pass =====" | tee -a "$PROGRESS_LOG"
   retry=0
   index=0
@@ -95,17 +73,16 @@ print(x.findtext('name').strip())
 PY
 )"
 
-    # echo -e "\n== ($index) $pkg_name -- $pkg_path" | tee -a "$PROGRESS_LOG"
-
     stamp="$SBUILD_DIR/stamps/.built_pkg_${pkg_name}"
-    # if [ -f "$stamp" ]; then
-    #   continue
-    # fi
+    if [ $force_build -eq 0 ] && [ -f "$stamp" ]; then
+       continue
+     fi
 
     pushd "$pkg_path" >/dev/null
 
-    bloom_generated=0
-    if [ ! -d "debian" ] || [ $force_build -eq 1 ]; then
+    echo -e "\n" | tee -a "$PROGRESS_LOG"
+    if [ ! -d "debian" ] || [ $force_bloom -eq 1 ]; then
+      echo "== ($index) $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
       rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
       if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
         popd >/dev/null
@@ -113,10 +90,9 @@ PY
         retry=1
         continue
       fi
-      bloom_generated=1
 
       # Apply patches for ros-jazzy packaging
-      $WS/patches.sh "$pkg_path"
+      $WS/patches.sh "$pkg_path" | tee -a "$PROGRESS_LOG"
 
       # Copy patched files from patches directory if they exist
       if [ -d "$WS/patches/$pkg_path" ]; then
@@ -128,17 +104,19 @@ PY
     # Identify debian package name
     src_name="$(dpkg-parsechangelog -S Source 2>/dev/null || true)"
 
-    echo -e "\n== ($index) $pkg_name -- $pkg_path -- $src_name" | tee -a "$PROGRESS_LOG"
-    if [ $bloom_generated -eq 1 ]; then
-      echo "== $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
-    fi  
+    echo "== ($index) $pkg_name: $pkg_path -- $src_name" | tee -a "$PROGRESS_LOG"
+
+    if ! grep -Fxq "$pkg_path" "$XREFERENCE" 2>/dev/null; then
+      echo "$src_name $pkg_name $pkg_path" >> $XREFERENCE
+    fi
 
     # Skip packages already built
-    if [ $force_build == 0 ] && [ -f "$stamp" ] && [ -f "$SBUILD_DIR/built/.$src_name" ]; then
+    if [ $force_build -eq 0 ] && [ -f "$stamp" ] && [ -f "$SBUILD_DIR/built/.$src_name" ]; then
       popd >/dev/null
-      echo "$src_name $pkg_name $pkg_path" >> $XREFERENCE
       continue
     fi
+
+    # Remove stamp and built marker
     rm -f $stamp
     rm -f "$SBUILD_DIR/built/.$src_name"
 
@@ -289,6 +267,7 @@ EOF
       sudo sbuild-update -ucar trixie-arm64-sbuild
       touch "$SBUILD_DIR/built/.$src_name"
       touch "$stamp"
+      rm -f "$SBUILD_DIR/logs/${src_name}_${src_ver}"*.build
       mv -f $buildLog  "$SBUILD_DIR/logs" 2>/dev/null || true
     else
       echo "!! $pkg_name: no .changes found in $SBUILD_RESULTS (nothing to publish?)" | tee -a "$PROGRESS_LOG"
@@ -317,6 +296,7 @@ EOF
   fi
 
   pass=$((pass + 1))
+  force_bloom=0
 
 done
 

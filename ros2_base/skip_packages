@@ -1,0 +1,9 @@
+src/ros2/rmw_connextdds/rmw_connextdds
+src/ros2/rmw_connextdds/rmw_connextdds_common
+src/ros2/rmw_connextdds/rmw_connextddsmicro
+src/ros2/rmw_connextdds/rti_connext_dds_cmake_module
+src/ros2/ros2_tracing/test_ros2trace
+src/ros2/ros2_tracing/test_tracetools_launch
+src/ros/urdfdom_headers
+src/eProsima/foonathan_memory_vendor
+src/gazebo-release/gz_cmake_vendor

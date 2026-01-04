@@ -15,10 +15,10 @@ repositories:
     type: git
     url: https://github.com/ament/ament_package.git
     version: jazzy
-  # ament/google_benchmark_vendor:
-  #   type: git
-  #   url: https://github.com/ament/google_benchmark_vendor.git
-  #   version: jazzy
+  ament/google_benchmark_vendor:
+    type: git
+    url: https://github.com/ament/google_benchmark_vendor.git
+    version: jazzy
   ament/googletest:
     type: git
     url: https://github.com/ament/googletest.git
