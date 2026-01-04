@@ -263,8 +263,8 @@ Check hits/misses at `http://127.0.0.1:3142/acng-report.html`.
 
 Copy:
 
-* `42-debian-trixie.yaml`
-* `42-debian-trixie.list`
+* `10-debian-trixie.yaml`
+* `10-debian-trixie.list`
 
 into:
 
@@ -277,6 +277,8 @@ Then update rosdep:
 ```bash
 rosdep update
 ```
+
+The name of the files is important as they need to precede any other files in `/etc/ros/rosdep/sources.list.d/`.
 
 ---
 
