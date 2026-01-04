@@ -243,13 +243,10 @@ Allow localhost (or your subnet) in `/etc/apt-cacher-ng/acng.conf` via `AllowedH
 sudo systemctl restart apt-cacher-ng
 ```
 
-Point sbuild to the proxy (per-user):
-
-```bash
-mkdir -p ~/.config/sbuild
-cat >> ~/.config/sbuild/config.pl <<'EOF'
-$apt_cacher = "http://127.0.0.1:3142";
-EOF
+Point sbuild to the proxy:
+```
+sudo schroot -c source:trixie-arm64-sbuild -u root --directory / -- \
+    bash -c 'echo "Acquire::http::Proxy \"http://127.0.0.1:3142\";" > /etc/apt/apt.conf.d/01proxy'
 ```
 
 Warm the cache once:
