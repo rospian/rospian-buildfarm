@@ -103,6 +103,17 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     ;;
 esac
 
+# Generic fix: if a package has dh_shlibdeps with -l but doesn't include
+# /opt/ros/jazzy/lib, add it to find ROS libraries from build dependencies
+if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
+   grep -q "dh_shlibdeps -l" "$WS/$PKG_PATH/debian/rules" && \
+   ! grep -q "dh_shlibdeps.*:/opt/ros/jazzy/lib" "$WS/$PKG_PATH/debian/rules"; then
+  sed -i 's|\(dh_shlibdeps -l.*\)$|\1:/opt/ros/jazzy/lib|' \
+    $WS/$PKG_PATH/debian/rules
+  echo "== Applied generic dh_shlibdeps fix to $PKG_PATH"
+  patched=1
+fi
+
 if [ $patched -eq 1 ]; then
   echo "== Applied patches to $PKG_PATH"
 fi

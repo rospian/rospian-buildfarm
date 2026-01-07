@@ -19,7 +19,6 @@ TARGET_PKG="${1:-}"
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
 SEQUENCE="$WS/sequence"
-touch $SEQUENCE
 XREFERENCE="$SBUILD_DIR/xreference"
 force_build=0
 # Always force bloom generation on first run to ensure patches are applied
@@ -82,6 +81,12 @@ PY
 
     echo -e "\n" | tee -a "$PROGRESS_LOG"
     if [ ! -d "debian" ] || [ $force_bloom -eq 1 ]; then
+      # Copy patched files from patches directory if they exist (before bloom)
+      if [ -d "$WS/patches/$pkg_path" ]; then
+        echo "== $pkg_name: applying file patches from patches/$pkg_path (pre-bloom)" | tee -a "$PROGRESS_LOG"
+        cp -r "$WS/patches/$pkg_path"/* "$WS/$pkg_path/"
+      fi
+
       echo "== ($index) $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
       rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
       if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
@@ -93,12 +98,6 @@ PY
 
       # Apply patches for ros-jazzy packaging
       $WS/patches.sh "$pkg_path" | tee -a "$PROGRESS_LOG"
-
-      # Copy patched files from patches directory if they exist
-      if [ -d "$WS/patches/$pkg_path" ]; then
-        echo "== $pkg_name: applying file patches from patches/$pkg_path" | tee -a "$PROGRESS_LOG"
-        cp -r "$WS/patches/$pkg_path"/* "$WS/$pkg_path/"
-      fi
     fi
 
     # Identify debian package name

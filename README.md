@@ -259,7 +259,14 @@ Check hits/misses at `http://127.0.0.1:3142/acng-report.html`.
 
 ---
 
-## 4. Configure rosdep for Debian Trixie
+## 4. Retrieving the source packages
+
+```
+cd ros2_base/src
+vcs import src --debug < ./ros2.repos
+```
+
+## 5. Configure rosdep for Debian Trixie
 
 Copy:
 
@@ -282,7 +289,7 @@ The name of the files is important as they need to precede any other files in `/
 
 ---
 
-## 5. Building packages
+## 6. Building packages
 
 The build script:
 
@@ -304,7 +311,21 @@ Packages that fail due to missing dependencies are retried automatically in late
 
 ---
 
-## 6. Troubleshooting
+## 7. Reinitializing the repository (clean rebuild)
+
+If you need to rebuild everything from scratch, reinitialize `/srv/aptrepo`:
+
+```bash
+rm -rf /srv/aptrepo/{db,dists,pool}/*
+reprepro -b /srv/aptrepo export
+sudo apt update
+```
+
+**Note:** This only clears the repository. Built `.deb` files in your workspace remain untouched. To force rebuilding packages, also remove the `debian/` directories from source packages or delete built `.deb` files.
+
+---
+
+## 8. Troubleshooting
 
 ### Package published but not visible to APT
 
@@ -354,7 +375,7 @@ librcpputils-dev
 
 ---
 
-## 7. Mental model (important)
+## 9. Mental model (important)
 
 Think in passes:
 
