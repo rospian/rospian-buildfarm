@@ -98,6 +98,35 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/control
     ;;
 
+  "src/ros2/urdf/urdf_parser_plugin")
+    # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
+    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
+  "src/ros2/urdf/urdf")
+    # Use Debian's liburdfdom-dev instead of ros-jazzy-urdfdom and ros-jazzy-urdfdom-headers
+    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
+      $WS/$PKG_PATH/debian/control
+    sed -i 's/ros-jazzy-urdfdom/liburdfdom-dev/g' \
+      $WS/$PKG_PATH/debian/control
+    # Add system library path to dh_shlibdeps to find liburdfdom_model.so
+    sed -i 's|\(dh_shlibdeps -l[^ ]*\)|\1:/usr/lib/aarch64-linux-gnu|' \
+      $WS/$PKG_PATH/debian/rules
+    ;;
+
+  "src/ros/urdfdom")
+    # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
+    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
+  "src/ros/kdl_parser/kdl_parser")
+    # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
+    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
   *)
     patched=0
     ;;
