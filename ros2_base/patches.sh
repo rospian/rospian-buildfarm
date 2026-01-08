@@ -127,6 +127,16 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/control
     ;;
 
+  "src/eclipse-cyclonedds/cyclonedds")
+    # Add LD_LIBRARY_PATH to override_dh_auto_build so idlc can find libiceoryx_posh.so
+    # The idlc tool is built and executed during the build process, and needs to find
+    # iceoryx libraries that were installed from earlier packages in the build sequence
+    # Include both standard and multiarch lib directories
+    sed -i '/override_dh_auto_build:/,/dh_auto_build/ {
+      /setup\.sh.*; fi &&/s|; fi &&|; fi \&\& export LD_LIBRARY_PATH="/opt/ros/jazzy/lib:/opt/ros/jazzy/lib/${DEB_HOST_MULTIARCH}:$$LD_LIBRARY_PATH" \&\&|
+    }' $WS/$PKG_PATH/debian/rules
+    ;;
+
   *)
     patched=0
     ;;
