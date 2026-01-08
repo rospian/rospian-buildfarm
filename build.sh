@@ -24,6 +24,43 @@ force_build=0
 # Always force bloom generation on first run to ensure patches are applied
 force_bloom=1
 
+# Lockfile to prevent simultaneous builds against the same chroot
+LOCKFILE="$SBUILD_DIR/.build.lock"
+
+# Check if another build is already running
+if [ -f "$LOCKFILE" ]; then
+  LOCK_PID=$(cat "$LOCKFILE" 2>/dev/null || echo "")
+  if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+    echo "Another build is already running (PID $LOCK_PID)"
+    echo "Waiting for it to complete before starting this build..."
+    echo "(Press Ctrl+C to cancel or will timeout after 300 seconds)"
+    # Wait for the other process to finish (max 300 seconds)
+    wait_time=0
+    max_wait=300
+    while kill -0 "$LOCK_PID" 2>/dev/null; do
+      sleep 5
+      wait_time=$((wait_time + 5))
+      if [ $wait_time -ge $max_wait ]; then
+        echo "ERROR: Timeout after ${max_wait} seconds waiting for build (PID $LOCK_PID) to complete"
+        echo "The other build is still running. Please wait for it to finish or kill it manually."
+        exit 1
+      fi
+    done
+    echo "Previous build completed. Starting this build now."
+    # Clean up the lockfile in case the other process didn't
+    rm -f "$LOCKFILE"
+  else
+    echo "Warning: Removing stale lockfile (PID $LOCK_PID not running)"
+    rm -f "$LOCKFILE"
+  fi
+fi
+
+# Create lockfile with current PID
+echo "$$" > "$LOCKFILE"
+
+# Ensure lockfile is removed on exit
+trap 'rm -f "$LOCKFILE"' EXIT INT TERM
+
 cd "$WS"
 
 cleanup_pytest_cache() {
