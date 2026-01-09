@@ -1,9 +1,7 @@
-src/ros2/rmw_connextdds/rmw_connextdds
-src/ros2/rmw_connextdds/rmw_connextdds_common
-src/ros2/rmw_connextdds/rmw_connextddsmicro
-src/ros2/rmw_connextdds/rti_connext_dds_cmake_module
-src/ros2/ros2_tracing/test_ros2trace
-src/ros2/ros2_tracing/test_tracetools_launch
+# Replaced with Debian urdfdom headers
 src/ros/urdfdom_headers
-src/eProsima/foonathan_memory_vendor
-src/gazebo-release/gz_cmake_vendor
+# RTI Connext DDS packages - proprietary middleware not available on Debian
+src/ros2/rmw_connextdds/rti_connext_dds_cmake_module
+src/ros2/rmw_connextdds/rmw_connextdds_common
+src/ros2/rmw_connextdds/rmw_connextdds
+src/ros2/rmw_connextdds/rmw_connextddsmicro

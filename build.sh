@@ -72,9 +72,9 @@ if [ -n "$TARGET_PKG" ]; then
   # Limit to the requested package name
   PKG_PATHS=($TARGET_PKG)
   force_build=1
-else 
+else
   # List package paths (one per ROS package, even if many live in one repo)
-  colcon list --base-paths src --paths-only | sort > $SBUILD_DIR/all_packages
+  colcon --log-base /dev/null list --base-paths src --paths-only 2>/dev/null | sort > $SBUILD_DIR/all_packages
   # Exclude skipped packages
   grep -Fvx -f skip_packages $SBUILD_DIR/all_packages > $SBUILD_DIR/inc_packages
   mapfile -t PKG_PATHS < $SBUILD_DIR/inc_packages
@@ -142,7 +142,7 @@ PY
 
     echo "== ($index) $pkg_name: $pkg_path -- $src_name" | tee -a "$PROGRESS_LOG"
 
-    if ! grep -Fxq "$pkg_path" "$XREFERENCE" 2>/dev/null; then
+    if ! awk -v p="$pkg_path" '$3==p {found=1; exit} END{exit !found}' "$XREFERENCE" 2>/dev/null; then
       echo "$src_name $pkg_name $pkg_path" >> $XREFERENCE
     fi
 
@@ -187,16 +187,6 @@ PY
           continue 2
         fi  
       done  
-    fi
-
-    # Patch debian rules for Python path
-    if [ -f "debian/rules" ]; then
-      # Fix 1: Replace setup.sh sourcing with PYTHONPATH export
-      sed -i 's|if \[ -f "/opt/ros/jazzy/setup.sh" \]; then \. "/opt/ros/jazzy/setup.sh"; fi && \\|export PYTHONPATH="/opt/ros/jazzy/lib/python3.13/site-packages:$$PYTHONPATH" \&\& \\|' "debian/rules"
-      # Fix 2: Add /usr to CMAKE_PREFIX_PATH
-      # sed -i 's|-DCMAKE_PREFIX_PATH="/opt/ros/jazzy"|-DCMAKE_PREFIX_PATH="/opt/ros/jazzy;/usr"|' "debian/rules"    
-      # Fix 3: Add /usr to AMENT_PREFIX_PATH
-      # sed -i 's|-DAMENT_PREFIX_PATH="/opt/ros/jazzy"|-DAMENT_PREFIX_PATH="/opt/ros/jazzy;/usr"|' "debian/rules"
     fi
 
     # Normalize changelog to a minimal valid stanza with unique timestamp version

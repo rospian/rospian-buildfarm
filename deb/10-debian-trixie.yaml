@@ -11922,6 +11922,20 @@ test_msgs:
         packages:
           - ros-jazzy-test-msgs
 
+test_tracetools:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-test-tracetools
+
+test_tracetools_launch:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-test-tracetools-launch
+
 tf2:
   debian:
     trixie:
@@ -13412,4 +13426,3 @@ zstd_vendor:
       apt:
         packages:
           - ros-jazzy-zstd-vendor
-
