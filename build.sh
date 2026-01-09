@@ -7,8 +7,7 @@ ROS_SUBDIR="${ROS_SUBDIR:-ros2_base}"
 WS="${WS:-$SCRIPT_DIR/$ROS_SUBDIR}"
 ROS_DISTRO="${ROS_DISTRO:-jazzy}"
 OS_DIST=trixie
-# REPO_DIST="$OS_DIST-$ROS_DISTRO"
-REPO_DIST="trixie"
+REPO_DIST="$OS_DIST-$ROS_DISTRO"
 ARCH=arm64
 APTREPO="${APTREPO:-/srv/aptrepo}"
 SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
@@ -194,7 +193,6 @@ PY
     first_line="$(head -n1 "$changelog")"
     src="$(echo "$first_line" | awk '{print $1}')"
     ver="$(echo "$first_line" | sed -n 's/^[^(]*(\([^)]*\)).*$/\1/p')"
-    dist="$(echo "$first_line" | awk '{print $3}' | sed 's/;$//')"
 
     # Add timestamp to version to ensure uniqueness
     build_timestamp="$(date -u +%Y%m%d%H%M%S)"
@@ -206,7 +204,7 @@ PY
     fi
 
     cat > "$changelog" <<EOF
-$src ($ver_with_timestamp) $dist; urgency=medium
+$src ($ver_with_timestamp) $REPO_DIST; urgency=medium
 
   * Automated release.
 
@@ -290,7 +288,7 @@ EOF
       reprepro -b "$APTREPO" include "$REPO_DIST" "$changes"
       reprepro -b "$APTREPO" export
       sudo apt update
-      sudo sbuild-update -ucar trixie-arm64-sbuild
+      sudo sbuild-update -ucar "$SBUILD_CHROOT"
       touch "$SBUILD_DIR/built/.$src_name"
       touch "$stamp"
       rm -f "$SBUILD_DIR/logs/${src_name}_${src_ver}"*.build
