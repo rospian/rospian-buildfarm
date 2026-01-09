@@ -285,7 +285,7 @@ EOF
       echo "== $pkg_name: publish via .changes: $changes" | tee -a "$PROGRESS_LOG"
       reprepro -b "$APTREPO" remove "$REPO_DIST" "$src_name" || true
       reprepro -b "$APTREPO" deleteunreferenced
-      reprepro -b "$APTREPO" include "$REPO_DIST" "$changes"
+      reprepro -b "$APTREPO" --ignore=wrongdistribution include "$REPO_DIST" "$changes"
       reprepro -b "$APTREPO" export
       sudo apt update
       sudo sbuild-update -ucar "$SBUILD_CHROOT"

@@ -6,6 +6,7 @@
 *.deb
 *.dsc
 *.tar.xz
+*.tar.gz
 pkg/*/debian/.debhelper/
 pkg/*/debian/ros-jazzy-*
 pkg/*/debian/debhelper-build-stamp

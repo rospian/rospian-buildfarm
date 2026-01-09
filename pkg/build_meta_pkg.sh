@@ -14,7 +14,7 @@ REPO_DIST="$OS_DIST-$ROS_DISTRO"
 ARCH=arm64
 
 # Clean previous build artifacts for the target package.
-rm -f $TARGET_PKG*.buildinfo $TARGET_PKG*.changes $TARGET_PKG*.deb $TARGET_PKG*.dsc $TARGET_PKG*.tar.xz
+rm -f $TARGET_PKG*.buildinfo $TARGET_PKG*.changes $TARGET_PKG*.deb $TARGET_PKG*.dsc $TARGET_PKG*.tar.xz $TARGET_PKG*.tar.gz
 
 cd $WS
 
