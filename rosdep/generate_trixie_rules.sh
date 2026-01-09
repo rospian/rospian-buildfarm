@@ -2,7 +2,7 @@
 
 # Script to generate Trixie rosdep rules from Bookworm pickle cache
 
-OUTPUT_FILE="/tmp/42-debian-trixie.yaml"
+OUTPUT_FILE="/tmp/10-debian-trixie.yaml"
 CACHE_DIR="$HOME/.ros/rosdep/sources.cache"
 
 echo "Generating Trixie rosdep rules from Bookworm definitions..."

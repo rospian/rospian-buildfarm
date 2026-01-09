@@ -264,14 +264,19 @@ Check hits/misses at `http://127.0.0.1:3142/acng-report.html`.
 ```
 cd ros2_base/src
 vcs import src --debug < ./ros2.repos
+./fetch_vendor_sources.sh
 ```
+
+`fetch_vendor_sources.sh` downloads vendor tarballs that cannot be fetched during
+offline builds (e.g., `mcap_vendor`) and stages them under the workspace so
+bloom/sbuild can build without network access.
 
 ## 5. Configure rosdep for Debian Trixie
 
 Copy:
 
-* `10-debian-trixie.yaml`
-* `10-debian-trixie.list`
+* `rosdep/10-debian-trixie.yaml`
+* `rosdep/10-debian-trixie.list`
 
 into:
 

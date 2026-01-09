@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**/*)",
+      "Bash(schroot:*)",
+      "Bash(apt-cache:*)",
+      "Bash(dpkg-deb:*)",
+      "Bash(./build.sh:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)",
+      "Bash(tee:*)",
+      "Bash(tail:*)",
+      "Bash(tar:*)",
+      "Bash(bloom-generate:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
