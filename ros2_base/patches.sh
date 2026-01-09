@@ -144,6 +144,58 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/control
     ;;
 
+  "src/ros/ros_environment")
+    # Install prefix-level setup scripts so /opt/ros/jazzy/setup.bash exists.
+    # Without these, ros2cli can't find Python package metadata.
+    awk '
+      { print }
+      /^\tdh_auto_install$/ {
+        print "\tprintf '\''%s\\n'\'' \\"
+        print "\t  \"import os\" \\"
+        print "\t  \"from ament_package import templates\" \\"
+        print "\t  \"\" \\"
+        print "\t  \"prefix = os.path.join('\''debian'\'', '\''ros-jazzy-ros-environment'\'', '\''opt'\'', '\''ros'\'', '\''jazzy'\'')\" \\"
+        print "\t  \"os.makedirs(prefix, exist_ok=True)\" \\"
+        print "\t  \"\" \\"
+        print "\t  \"env = {\" \\"
+        print "\t  \"    '\''CMAKE_INSTALL_PREFIX'\'': '\''/opt/ros/jazzy'\'',\" \\"
+        print "\t  \"    '\''ament_package_PYTHON_EXECUTABLE'\'': '\''/usr/bin/python3'\'',\" \\"
+        print "\t  \"    '\''SKIP_PARENT_PREFIX_PATH'\'': '\'''\'',\" \\"
+        print "\t  \"}\" \\"
+        print "\t  \"\" \\"
+        print "\t  \"def write_template(name):\" \\"
+        print "\t  \"    path = templates.get_prefix_level_template_path(name)\" \\"
+        print "\t  \"    if name.endswith('\''.in'\''):\" \\"
+        print "\t  \"        content = templates.configure_file(str(path), env)\" \\"
+        print "\t  \"        out_name = name[:-3]\" \\"
+        print "\t  \"    else:\" \\"
+        print "\t  \"        with open(path, '\''r'\'', encoding='\''utf-8'\'') as f:\" \\"
+        print "\t  \"            content = f.read()\" \\"
+        print "\t  \"        out_name = name\" \\"
+        print "\t  \"    dest = os.path.join(prefix, out_name)\" \\"
+        print "\t  \"    with open(dest, '\''w'\'', encoding='\''utf-8'\'') as f:\" \\"
+        print "\t  \"        f.write(content)\" \\"
+        print "\t  \"    os.chmod(dest, 0o644)\" \\"
+        print "\t  \"\" \\"
+        print "\t  \"for name in [\" \\"
+        print "\t  \"    '\''setup.bash'\'',\" \\"
+        print "\t  \"    '\''setup.zsh'\'',\" \\"
+        print "\t  \"    '\''local_setup.bash'\'',\" \\"
+        print "\t  \"    '\''local_setup.zsh'\'',\" \\"
+        print "\t  \"    '\''_local_setup_util.py'\'',\" \\"
+        print "\t  \"    '\''setup.sh.in'\'',\" \\"
+        print "\t  \"    '\''local_setup.sh.in'\'',\" \\"
+        print "\t  \"]:\" \\"
+        print "\t  \"    write_template(name)\" \\"
+        print "\t  > debian/ros-jazzy-ros-environment/_generate_prefix_setup.py"
+        print "\tPYTHONPATH=\"/opt/ros/jazzy/lib/python3.13/site-packages:$$PYTHONPATH\" \\"
+        print "\tpython3 debian/ros-jazzy-ros-environment/_generate_prefix_setup.py"
+        print "\trm -f debian/ros-jazzy-ros-environment/_generate_prefix_setup.py"
+      }
+    ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+    mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+    ;;
+
   "src/ros2/rosbag2/rosbag2_storage_mcap" | \
   "src/ros2/rosbag2/rosbag2_storage_sqlite3" | \
   "src/ros2/geometry2/tf2_bullet" | \
