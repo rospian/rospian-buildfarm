@@ -11,6 +11,7 @@ REPO_DIST="$OS_DIST-$ROS_DISTRO"
 ARCH=arm64
 APTREPO="${APTREPO:-/srv/aptrepo}"
 SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
+PARALLEL_JOBS="${PARALLEL_JOBS:-$(($(nproc) - 1))}"
 SBUILD_DIR="$WS/sbuild"
 SBUILD_CHROOT="${SBUILD_CHROOT:-trixie-arm64-sbuild}"
 SOURCE_CHROOT="source:${SBUILD_CHROOT}"
@@ -96,6 +97,7 @@ retry=1
 
 while [ $retry -eq 1 ]; do
   PROGRESS_LOG="$SBUILD_DIR/logs/progress_${timestamp}_${pass}.log"
+  ln -sf $PROGRESS_LOG $SBUILD_DIR/logs/progress_latest.log
   echo "===== PASS $pass =====" | tee -a "$PROGRESS_LOG"
   retry=0
   index=0
@@ -276,9 +278,9 @@ EOF
     # Remove old build logs for this package
     rm -f "$WS/${src_name}_${src_ver}"*.build
 
-    echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH $dsc" | tee -a "$PROGRESS_LOG"
+    echo "== $pkg_name: sbuild -d $OS_DIST --arch=$ARCH (parallel=$PARALLEL_JOBS) $dsc" | tee -a "$PROGRESS_LOG"
     buildLog="${src_name}_${src_ver_full}_${ARCH}.build"
-    if ! DEB_BUILD_OPTIONS=nocheck sbuild --purge-deps=always --force-orig-source --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
+    if ! DEB_BUILD_OPTIONS="nocheck parallel=$PARALLEL_JOBS" sbuild --purge-deps=always --force-orig-source --no-run-lintian -d "$OS_DIST" --arch="$ARCH" "$dsc"; then
       echo "!! $pkg_name: sbuild failed (likely missing deps); retrying in later pass" | tee -a "$PROGRESS_LOG"
       echo "!! $pkg_name: see log $WS/$buildLog" | tee -a "$PROGRESS_LOG"
       retry=1

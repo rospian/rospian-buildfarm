@@ -259,6 +259,45 @@ Check hits/misses at `http://127.0.0.1:3142/acng-report.html`.
 
 ---
 
+### 3.6 Speed up builds with parallel compilation and eatmydata (optional)
+
+Two key optimizations can significantly reduce build times:
+
+#### Parallel compilation
+
+The build script supports parallel compilation via the `PARALLEL_JOBS` environment variable. By default, it uses `nproc - 1` (all cores minus one, to keep the system responsive).
+
+```bash
+# Use default (nproc - 1)
+./build.sh
+
+# Override to use all cores
+PARALLEL_JOBS=4 ./build.sh
+
+# Limit to 2 jobs (useful if RAM is constrained)
+PARALLEL_JOBS=2 ./build.sh
+```
+
+This sets `DEB_BUILD_OPTIONS="parallel=N"` which debhelper passes to CMake/Make as `-jN`.
+
+#### eatmydata
+
+`eatmydata` disables `fsync()` calls during builds, which can reduce build times by 20-50% on slower storage (especially SD cards). It's safe for sbuild because chroots are disposable.
+
+Install it once in your chroot:
+
+```bash
+sudo schroot -c source:trixie-arm64-sbuild -u root --directory / -- apt install -y eatmydata
+```
+
+Then enable it in `~/.sbuildrc`:
+
+```perl
+$eatmydata = 1;
+```
+
+---
+
 ## 4. Retrieving the source packages
 
 ```
