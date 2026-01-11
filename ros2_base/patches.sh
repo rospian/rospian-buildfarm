@@ -202,6 +202,12 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     # since they require proprietary middleware not available on Debian
     sed -i 's/ros-jazzy-rmw-connextdds, //g' \
       $WS/$PKG_PATH/debian/control
+    # Add ros-jazzy-rmw-fastrtps-cpp as a runtime dependency so that any package
+    # that depends on rmw_implementation will have at least one concrete RMW available.
+    # This fixes CMake configure failures where rmw_implementation_cmake cannot find
+    # any RMW implementation when building packages that transitively depend on rmw.
+    sed -i 's/^\(Depends:.*ros-jazzy-rmw-implementation-cmake\)/\1, ros-jazzy-rmw-fastrtps-cpp/' \
+      $WS/$PKG_PATH/debian/control
     ;;
 
   "src/ros/ros_environment")
@@ -256,30 +262,32 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
     ;;
 
-  "src/ros2/rosbag2/rosbag2_storage_mcap" | \
-  "src/ros2/rosbag2/rosbag2_storage_sqlite3" | \
-  "src/ros2/geometry2/tf2_bullet" | \
-  "src/ros2/geometry2/tf2_eigen")
-    # Ensure a concrete RMW implementation is available at configure time
-    if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-      sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-        $WS/$PKG_PATH/debian/control
-    else
-      sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-        $WS/$PKG_PATH/debian/control
-    fi
-    ;;
-
-  "src/ros2/rosbag2/rosbag2_py")
-    # Ensure a concrete RMW implementation is available at configure time
-    if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-      sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-        $WS/$PKG_PATH/debian/control
-    else
-      sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-        $WS/$PKG_PATH/debian/control
-    fi
-    ;;
+  # COMMENTED OUT: These patches are redundant now that ros-jazzy-rmw-implementation
+  # depends on ros-jazzy-rmw-fastrtps-cpp (see src/ros2/rmw_implementation/rmw_implementation case above)
+  # "src/ros2/rosbag2/rosbag2_storage_mcap" | \
+  # "src/ros2/rosbag2/rosbag2_storage_sqlite3" | \
+  # "src/ros2/geometry2/tf2_bullet" | \
+  # "src/ros2/geometry2/tf2_eigen")
+  #   # Ensure a concrete RMW implementation is available at configure time
+  #   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
+  #     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
+  #       $WS/$PKG_PATH/debian/control
+  #   else
+  #     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
+  #       $WS/$PKG_PATH/debian/control
+  #   fi
+  #   ;;
+  #
+  # "src/ros2/rosbag2/rosbag2_py")
+  #   # Ensure a concrete RMW implementation is available at configure time
+  #   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
+  #     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
+  #       $WS/$PKG_PATH/debian/control
+  #   else
+  #     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
+  #       $WS/$PKG_PATH/debian/control
+  #   fi
+  #   ;;
 
   *)
     patched=0
@@ -316,22 +324,27 @@ if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
   echo "== Applied multiarch dh_shlibdeps fix to $PKG_PATH"
 fi
 
+# COMMENTED OUT: This generic fix is redundant now that ros-jazzy-rmw-implementation
+# depends on ros-jazzy-rmw-fastrtps-cpp (see src/ros2/rmw_implementation/rmw_implementation case above)
 # Generic fix: if package uses RCL/RMW, ensure a concrete RMW is in Build-Depends
-if [ -f "$WS/$PKG_PATH/debian/control" ] && \
-   grep -R -q -E "find_package\\((rmw_implementation(_cmake)?|rclcpp|rclcpp_lifecycle|rclpy|rcl_lifecycle|rcl_action|rcl)\\b" "$WS/$PKG_PATH" 2>/dev/null && \
-   ! grep -q "ros-jazzy-rmw-fastrtps-cpp" "$WS/$PKG_PATH/debian/control"; then
-  if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-    sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-      $WS/$PKG_PATH/debian/control
-  elif grep -q "ros-jazzy-rmw-implementation" "$WS/$PKG_PATH/debian/control"; then
-    sed -i 's/ros-jazzy-rmw-implementation/ros-jazzy-rmw-implementation, ros-jazzy-rmw-fastrtps-cpp/' \
-      $WS/$PKG_PATH/debian/control
-  else
-    sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-      $WS/$PKG_PATH/debian/control
-  fi
-  echo "== Added ros-jazzy-rmw-fastrtps-cpp Build-Depends to $PKG_PATH"
-fi
+# Check both: 1) CMakeLists.txt find_package calls, and 2) debian/control dependencies
+# The second check catches packages that use variable expansion like find_package(${Dep})
+# if [ -f "$WS/$PKG_PATH/debian/control" ] && \
+#    ! grep -q "ros-jazzy-rmw-fastrtps-cpp" "$WS/$PKG_PATH/debian/control" && \
+#    ( grep -R -q -E "find_package\\((rmw_implementation(_cmake)?|rclcpp|rclcpp_lifecycle|rclpy|rcl_lifecycle|rcl_action|rcl)\\b" "$WS/$PKG_PATH" 2>/dev/null || \
+#      grep -q -E "ros-jazzy-(rclcpp|rclcpp-lifecycle|rclpy|rcl|rmw-implementation)" "$WS/$PKG_PATH/debian/control" ); then
+#   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
+#     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
+#       $WS/$PKG_PATH/debian/control
+#   elif grep -q "ros-jazzy-rmw-implementation" "$WS/$PKG_PATH/debian/control"; then
+#     sed -i 's/ros-jazzy-rmw-implementation/ros-jazzy-rmw-implementation, ros-jazzy-rmw-fastrtps-cpp/' \
+#       $WS/$PKG_PATH/debian/control
+#   else
+#     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
+#       $WS/$PKG_PATH/debian/control
+#   fi
+#   echo "== Added ros-jazzy-rmw-fastrtps-cpp Build-Depends to $PKG_PATH"
+# fi
 
 # Generic fix: Replace setup.sh sourcing with PYTHONPATH export in debian/rules
 # This ensures Python packages can be found without sourcing the ROS setup script
@@ -350,4 +363,13 @@ if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
    ! grep -q 'dh $@ --parallel\|dh $@ .* --parallel' "$WS/$PKG_PATH/debian/rules"; then
   sed -i 's/dh $@ /dh $@ --parallel /' "$WS/$PKG_PATH/debian/rules"
   echo "== Enabled parallel builds for $PKG_PATH"
+fi
+
+# Generic fix: Set ROS_DISTRO environment variable for packages that require it
+# Some packages check ENV{ROS_DISTRO} in CMakeLists.txt for distro-specific workarounds
+if grep -R -q -E 'ENV\{ROS_DISTRO\}|\$ENV\{ROS_DISTRO\}' "$WS/$PKG_PATH" 2>/dev/null && \
+   [ -f "$WS/$PKG_PATH/debian/rules" ] && \
+   ! grep -q 'export ROS_DISTRO=' "$WS/$PKG_PATH/debian/rules"; then
+  sed -i '/^export DH_VERBOSE/a export ROS_DISTRO=jazzy' "$WS/$PKG_PATH/debian/rules"
+  echo "== Added ROS_DISTRO=jazzy export to $PKG_PATH"
 fi
