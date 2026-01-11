@@ -4,6 +4,21 @@ WS="$(dirname "$SCRIPT_PATH")"
 PKG_PATH="${1:-}"
 patched=0
 
+diff_tmp=""
+control_before=""
+rules_before=""
+if [ -n "$PKG_PATH" ]; then
+  diff_tmp="$(mktemp -d)"
+  if [ -f "$WS/$PKG_PATH/debian/control" ]; then
+    control_before="$diff_tmp/control"
+    cp "$WS/$PKG_PATH/debian/control" "$control_before"
+  fi
+  if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+    rules_before="$diff_tmp/rules"
+    cp "$WS/$PKG_PATH/debian/rules" "$rules_before"
+  fi
+fi
+
 patched=1
 case "$PKG_PATH" in
   "src/ros2/rviz/rviz_ogre_vendor")
@@ -21,61 +36,38 @@ case "$PKG_PATH" in
       $WS/$PKG_PATH/debian/rules
     ;;
 
-  "src/ros2/rviz/rviz_default_plugins")
-    # Add gz_math_vendor, gz_cmake_vendor, and gz_utils_vendor prefixes so CMake can find gz-math7 and its dependencies
-    # gz-math7 internally requires gz-utils2 which is installed under gz_utils_vendor
-    sed -i 's|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy\"|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy/opt/gz_utils_vendor\"|' \
-      $WS/$PKG_PATH/debian/rules
-    # Pin gz-math7_DIR, gz-cmake3_DIR, and gz-utils2_DIR to vendor install paths for reliable discovery
-    # The original -DCMAKE_PREFIX_PATH line already has a trailing backslash, so we just update the value
-    # and insert the new -D lines after it (they also need backslashes since $(BUILD_TESTING_ARG) follows)
-    if ! grep -q 'gz-math7_DIR' "$WS/$PKG_PATH/debian/rules"; then
-      sed -i 's|-DCMAKE_PREFIX_PATH=\"/opt/ros/jazzy\"|-DCMAKE_PREFIX_PATH=\"/opt/ros/jazzy:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy/opt/gz_utils_vendor\"|' \
-        $WS/$PKG_PATH/debian/rules
-      awk '
-        { print }
-        /-DCMAKE_PREFIX_PATH=.*gz_math_vendor/ {
-          print "\t\t-Dgz-math7_DIR=\"/opt/ros/jazzy/opt/gz_math_vendor/lib/cmake/gz-math7\" \\"
-          print "\t\t-Dgz-cmake3_DIR=\"/opt/ros/jazzy/opt/gz_cmake_vendor/share/cmake/gz-cmake3\" \\"
-          print "\t\t-Dgz-utils2_DIR=\"/opt/ros/jazzy/opt/gz_utils_vendor/lib/cmake/gz-utils2\" \\"
-        }
-      ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
-      mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
-    fi
-    # Add rviz_ogre_vendor and gz_math_vendor lib dirs to dh_shlibdeps so Ogre and gz-math libs resolve
-    if ! grep -q "/opt/ros/jazzy/opt/rviz_ogre_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
-      sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib|' \
-        $WS/$PKG_PATH/debian/rules
-    fi
-    ;;
-
+  "src/ros2/rviz/rviz_default_plugins" | \
   "src/ros2/rviz/rviz_common")
     # Add rviz_ogre_vendor lib dir to dh_shlibdeps so Ogre libs resolve
+    # (gz vendor paths for AMENT_PREFIX_PATH and dh_shlibdeps will be added automatically
+    # by the generic gz vendor patches below)
     if ! grep -q "/opt/ros/jazzy/opt/rviz_ogre_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
       sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib|' \
         $WS/$PKG_PATH/debian/rules
     fi
     ;;
 
-  "src/ros2/rosidl_dynamic_typesupport")
-    sed -i 's/librosidl-runtime-c-cpp-dev, /&ros-jazzy-rosidl-runtime-c, /' \
-      $WS/$PKG_PATH/debian/control
-    ;;
-
+  "src/ros2/rosidl_dynamic_typesupport" | \
   "src/ros2/rmw/rmw")
+    # Add ros-jazzy-rosidl-runtime-c dependency alongside librosidl-runtime-c-cpp-dev
     sed -i 's/librosidl-runtime-c-cpp-dev, /&ros-jazzy-rosidl-runtime-c, /' \
       $WS/$PKG_PATH/debian/control
     ;;
 
-  "src/ros2/rosidl/rosidl_cli")
-    # Drop stray pytest caches in python installs to avoid file clashes
-    sed -i 's|dh_auto_install$|dh_auto_install \\&\\& \\\\|;s|^\\(.*dh_auto_install \\\\&\\\\& \\\\)$|\\1\\n\\tfind debian/ros-jazzy-rosidl-cli -path \"*/.pytest_cache\" -prune -exec rm -rf {} +|' \
-      $WS/$PKG_PATH/debian/rules
-    ;;
-
+  "src/ros2/rosidl/rosidl_cli" | \
   "src/ros2/rpyutils")
-    sed -i 's|dh_auto_install$|dh_auto_install \\&\\& \\\\|;s|^\\(.*dh_auto_install \\\\&\\\\& \\\\)$|\\1\\n\\tfind debian/ros-jazzy-rpyutils -path \"*/.pytest_cache\" -prune -exec rm -rf {} +|' \
-      $WS/$PKG_PATH/debian/rules
+    # Drop stray pytest caches in python installs to avoid file clashes
+    # Extract package name from path (e.g., "rosidl_cli" from "src/ros2/rosidl/rosidl_cli")
+    pkg_name=$(basename "$PKG_PATH")
+    ros_pkg_name="ros-jazzy-${pkg_name//_/-}"
+    # Use awk to add the pytest cache cleanup after dh_auto_install
+    awk -v pkg="$ros_pkg_name" '/^\tdh_auto_install$/ {
+      print "\tdh_auto_install && \\"
+      print "\tfind debian/" pkg " -path \"*/.pytest_cache\" -prune -exec rm -rf {} +"
+      next
+    }
+    { print }' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.tmp"
+    mv "$WS/$PKG_PATH/debian/rules.tmp" "$WS/$PKG_PATH/debian/rules"
     ;;
 
   "src/ros2/rosidl/rosidl_cmake")
@@ -144,7 +136,9 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/control
     ;;
 
-  "src/ros2/urdf/urdf_parser_plugin")
+  "src/ros2/urdf/urdf_parser_plugin" | \
+  "src/ros/urdfdom" | \
+  "src/ros/kdl_parser/kdl_parser")
     # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
     sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
       $WS/$PKG_PATH/debian/control
@@ -161,29 +155,19 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/rules
     ;;
 
-  "src/ros-visualization/qt_gui_core/qt_gui")
-    # Use python3-pyqt5.sip; python3-sip(-dev) is not available in Trixie
-    sed -i -e 's/python3-sip-dev/python3-pyqt5.sip/g' \
-      -e 's/python3-sip\>/python3-pyqt5.sip/g' \
-      $WS/$PKG_PATH/debian/control
+  "src/ros/sdformat_urdf/sdformat_urdf")
+    # Add sdformat_vendor + gz_math_vendor lib dirs to dh_shlibdeps so libsdformat14/libgz-math7 resolve
+    if ! grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+      sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib|' \
+        $WS/$PKG_PATH/debian/rules
+    fi
     ;;
 
+  "src/ros-visualization/qt_gui_core/qt_gui" | \
   "src/ros-visualization/python_qt_binding")
     # Use python3-pyqt5.sip; python3-sip(-dev) is not available in Trixie
     sed -i -e 's/python3-sip-dev/python3-pyqt5.sip/g' \
       -e 's/python3-sip\>/python3-pyqt5.sip/g' \
-      $WS/$PKG_PATH/debian/control
-    ;;
-
-  "src/ros/urdfdom")
-    # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
-    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
-      $WS/$PKG_PATH/debian/control
-    ;;
-
-  "src/ros/kdl_parser/kdl_parser")
-    # Use Debian's liburdfdom-headers-dev instead of ros-jazzy-urdfdom-headers
-    sed -i 's/ros-jazzy-urdfdom-headers/liburdfdom-headers-dev/g' \
       $WS/$PKG_PATH/debian/control
     ;;
 
@@ -262,33 +246,6 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
     ;;
 
-  # COMMENTED OUT: These patches are redundant now that ros-jazzy-rmw-implementation
-  # depends on ros-jazzy-rmw-fastrtps-cpp (see src/ros2/rmw_implementation/rmw_implementation case above)
-  # "src/ros2/rosbag2/rosbag2_storage_mcap" | \
-  # "src/ros2/rosbag2/rosbag2_storage_sqlite3" | \
-  # "src/ros2/geometry2/tf2_bullet" | \
-  # "src/ros2/geometry2/tf2_eigen")
-  #   # Ensure a concrete RMW implementation is available at configure time
-  #   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-  #     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-  #       $WS/$PKG_PATH/debian/control
-  #   else
-  #     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-  #       $WS/$PKG_PATH/debian/control
-  #   fi
-  #   ;;
-  #
-  # "src/ros2/rosbag2/rosbag2_py")
-  #   # Ensure a concrete RMW implementation is available at configure time
-  #   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-  #     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-  #       $WS/$PKG_PATH/debian/control
-  #   else
-  #     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-  #       $WS/$PKG_PATH/debian/control
-  #   fi
-  #   ;;
-
   *)
     patched=0
     ;;
@@ -324,28 +281,6 @@ if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
   echo "== Applied multiarch dh_shlibdeps fix to $PKG_PATH"
 fi
 
-# COMMENTED OUT: This generic fix is redundant now that ros-jazzy-rmw-implementation
-# depends on ros-jazzy-rmw-fastrtps-cpp (see src/ros2/rmw_implementation/rmw_implementation case above)
-# Generic fix: if package uses RCL/RMW, ensure a concrete RMW is in Build-Depends
-# Check both: 1) CMakeLists.txt find_package calls, and 2) debian/control dependencies
-# The second check catches packages that use variable expansion like find_package(${Dep})
-# if [ -f "$WS/$PKG_PATH/debian/control" ] && \
-#    ! grep -q "ros-jazzy-rmw-fastrtps-cpp" "$WS/$PKG_PATH/debian/control" && \
-#    ( grep -R -q -E "find_package\\((rmw_implementation(_cmake)?|rclcpp|rclcpp_lifecycle|rclpy|rcl_lifecycle|rcl_action|rcl)\\b" "$WS/$PKG_PATH" 2>/dev/null || \
-#      grep -q -E "ros-jazzy-(rclcpp|rclcpp-lifecycle|rclpy|rcl|rmw-implementation)" "$WS/$PKG_PATH/debian/control" ); then
-#   if grep -q "ros-jazzy-rmw-implementation-cmake" "$WS/$PKG_PATH/debian/control"; then
-#     sed -i 's/ros-jazzy-rmw-implementation-cmake/ros-jazzy-rmw-implementation-cmake, ros-jazzy-rmw-fastrtps-cpp/' \
-#       $WS/$PKG_PATH/debian/control
-#   elif grep -q "ros-jazzy-rmw-implementation" "$WS/$PKG_PATH/debian/control"; then
-#     sed -i 's/ros-jazzy-rmw-implementation/ros-jazzy-rmw-implementation, ros-jazzy-rmw-fastrtps-cpp/' \
-#       $WS/$PKG_PATH/debian/control
-#   else
-#     sed -i 's/^\(Build-Depends:.*\)$/\1, ros-jazzy-rmw-fastrtps-cpp/' \
-#       $WS/$PKG_PATH/debian/control
-#   fi
-#   echo "== Added ros-jazzy-rmw-fastrtps-cpp Build-Depends to $PKG_PATH"
-# fi
-
 # Generic fix: Replace setup.sh sourcing with PYTHONPATH export in debian/rules
 # This ensures Python packages can be found without sourcing the ROS setup script
 if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
@@ -372,4 +307,95 @@ if grep -R -q -E 'ENV\{ROS_DISTRO\}|\$ENV\{ROS_DISTRO\}' "$WS/$PKG_PATH" 2>/dev/
    ! grep -q 'export ROS_DISTRO=' "$WS/$PKG_PATH/debian/rules"; then
   sed -i '/^export DH_VERBOSE/a export ROS_DISTRO=jazzy' "$WS/$PKG_PATH/debian/rules"
   echo "== Added ROS_DISTRO=jazzy export to $PKG_PATH"
+fi
+
+# Generic fix: Add gz vendor paths to AMENT_PREFIX_PATH for packages that depend on them
+# When a package depends on gz vendor packages, ament needs to know where to find them
+# so it can set up CMAKE_PREFIX_PATH correctly. The vendor packages' -extras.cmake files
+# will then add both the extra_cmake and parent directories to CMAKE_PREFIX_PATH.
+if [ -f "$WS/$PKG_PATH/debian/control" ] && [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+  gz_vendor_paths=""
+
+  # Build list of gz vendor paths based on dependencies
+  if grep -q "ros-jazzy-gz-math-vendor" "$WS/$PKG_PATH/debian/control"; then
+    gz_vendor_paths="${gz_vendor_paths}:/opt/ros/jazzy/opt/gz_math_vendor"
+  fi
+
+  if grep -q "ros-jazzy-gz-cmake-vendor" "$WS/$PKG_PATH/debian/control"; then
+    gz_vendor_paths="${gz_vendor_paths}:/opt/ros/jazzy/opt/gz_cmake_vendor"
+  fi
+
+  if grep -q "ros-jazzy-gz-utils-vendor" "$WS/$PKG_PATH/debian/control"; then
+    gz_vendor_paths="${gz_vendor_paths}:/opt/ros/jazzy/opt/gz_utils_vendor"
+  fi
+
+  if grep -q "ros-jazzy-gz-tools-vendor" "$WS/$PKG_PATH/debian/control"; then
+    gz_vendor_paths="${gz_vendor_paths}:/opt/ros/jazzy/opt/gz_tools_vendor"
+  fi
+
+  # If we found gz vendor dependencies and they're not already in AMENT_PREFIX_PATH, add them
+  # Check specifically in the AMENT_PREFIX_PATH line, not elsewhere in the file
+  if [ -n "$gz_vendor_paths" ] && \
+     grep -q 'AMENT_PREFIX_PATH="/opt/ros/jazzy"' "$WS/$PKG_PATH/debian/rules" && \
+     ! grep 'AMENT_PREFIX_PATH=' "$WS/$PKG_PATH/debian/rules" | grep -q "/opt/ros/jazzy/opt/gz_.*_vendor"; then
+    sed -i "s|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy\"|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy${gz_vendor_paths}\"|" \
+      "$WS/$PKG_PATH/debian/rules"
+    echo "== Added gz vendor paths to AMENT_PREFIX_PATH for $PKG_PATH"
+  fi
+fi
+
+# Generic fix: Add gz vendor package library paths for packages that depend on them
+# If a package depends on any of the gz vendor packages (gz-math, gz-utils, gz-tools),
+# add their library directories to dh_shlibdeps so dpkg-shlibdeps can find the vendored libraries
+if [ -f "$WS/$PKG_PATH/debian/control" ] && [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+  gz_vendor_libs=""
+
+  # Check for gz_math_vendor dependency and add its lib path
+  if grep -q "ros-jazzy-gz-math-vendor" "$WS/$PKG_PATH/debian/control" && \
+     ! grep -q "/opt/ros/jazzy/opt/gz_math_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+    gz_vendor_libs="${gz_vendor_libs}:/opt/ros/jazzy/opt/gz_math_vendor/lib"
+  fi
+
+  # Check for gz_utils_vendor dependency and add its lib path
+  if grep -q "ros-jazzy-gz-utils-vendor" "$WS/$PKG_PATH/debian/control" && \
+     ! grep -q "/opt/ros/jazzy/opt/gz_utils_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+    gz_vendor_libs="${gz_vendor_libs}:/opt/ros/jazzy/opt/gz_utils_vendor/lib"
+  fi
+
+  # Check for gz_tools_vendor dependency and add its lib path
+  if grep -q "ros-jazzy-gz-tools-vendor" "$WS/$PKG_PATH/debian/control" && \
+     ! grep -q "/opt/ros/jazzy/opt/gz_tools_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+    gz_vendor_libs="${gz_vendor_libs}:/opt/ros/jazzy/opt/gz_tools_vendor/lib"
+  fi
+
+  # If we found any gz vendor dependencies, add their lib paths to dh_shlibdeps
+  if [ -n "$gz_vendor_libs" ] && grep -q "dh_shlibdeps" "$WS/$PKG_PATH/debian/rules"; then
+    sed -i "/dh_shlibdeps -l/ s|\$|${gz_vendor_libs}|" "$WS/$PKG_PATH/debian/rules"
+    echo "== Added gz vendor lib paths to dh_shlibdeps for $PKG_PATH"
+  fi
+fi
+
+# Log differences if any
+if [ -n "$diff_tmp" ]; then
+  diff_dir="$WS/diff/deb/$PKG_PATH/debian"
+  mkdir -p "$diff_dir"
+  if [ -n "$control_before" ] && [ -f "$WS/$PKG_PATH/debian/control" ]; then
+    if ! diff -u --label "a/debian/control" --label "b/debian/control" \
+      "$control_before" "$WS/$PKG_PATH/debian/control" > "$diff_dir/control.diff"; then
+      echo "== debian/control diff for $PKG_PATH"
+      cat "$diff_dir/control.diff"
+    else
+      rm -f "$diff_dir/control.diff"
+    fi
+  fi
+  if [ -n "$rules_before" ] && [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+    if ! diff -u --label "a/debian/rules" --label "b/debian/rules" \
+      "$rules_before" "$WS/$PKG_PATH/debian/rules" > "$diff_dir/rules.diff"; then
+      echo "== debian/rules diff for $PKG_PATH"
+      cat "$diff_dir/rules.diff"
+    else
+      rm -f "$diff_dir/rules.diff"
+    fi
+  fi
+  rm -rf "$diff_tmp"
 fi

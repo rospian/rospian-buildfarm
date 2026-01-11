@@ -5,3 +5,6 @@ src/ros2/rmw_connextdds/rti_connext_dds_cmake_module
 src/ros2/rmw_connextdds/rmw_connextdds_common
 src/ros2/rmw_connextdds/rmw_connextdds
 src/ros2/rmw_connextdds/rmw_connextddsmicro
+#
+src/ros-controls/kinematics_interface/kinematics_interface_pinocchio
+src/topic_based_hardware_interfaces/joint_state_topic_hardware_interface

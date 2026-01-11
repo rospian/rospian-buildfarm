@@ -13426,3 +13426,33 @@ zstd_vendor:
       apt:
         packages:
           - ros-jazzy-zstd-vendor
+
+# generate_parameter_library example packages - local-only, not in rosdistro
+generate_parameter_library_example:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-generate-parameter-library-example
+
+generate_parameter_library_example_cmake_python:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-cmake-generate-parameter-module-example
+
+generate_parameter_library_example_python:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-generate-parameter-module-example
+
+# ros2_controllers packages missing trixie mappings in upstream rosdistro
+state_interfaces_broadcaster:
+  debian:
+    trixie:
+      apt:
+        packages:
+          - ros-jazzy-state-interfaces-broadcaster

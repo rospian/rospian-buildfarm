@@ -14,3 +14,4 @@ pkg/*/debian/files
 **/log
 nohup.out
 dpkg-source.log
+**/diff/

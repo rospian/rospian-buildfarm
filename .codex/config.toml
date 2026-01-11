@@ -1,0 +1,42 @@
+[permissions]
+# Allow read-only access to the workspace
+read = true
+
+# Require confirmation before edits
+write = "prompt"
+
+# Disallow destructive actions by default
+delete = false
+
+# Disallow shell execution unless explicitly allowed
+shell = "prompt"
+
+[permissions.paths]
+write = [
+  "ros2_base/patches/**",
+  "ros2_base/sbuild/**",
+  "ros2_base/patches.sh",
+  "build.sh",
+  "/tmp/**",
+]
+
+read = [
+  "**"
+]
+
+[shell]
+# Restrict shell access to known-safe commands
+allowed_commands = [
+  "awk",
+  "colcon",
+  "ros2",
+  "bloom",
+  "dpkg-buildpackage",
+  "dpkg-deb",
+  "sbuild",
+  "apt",
+  "apt-get",
+  "cmake",
+  "make",
+  "git"
+]

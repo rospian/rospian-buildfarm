@@ -51,6 +51,16 @@ The `patches.sh` script modifies bloom-generated **Debian packaging files** (deb
 2. Use the package path relative to workspace (e.g., `src/ros2/urdf/urdf_parser_plugin`)
 3. Use `sed -i` to modify files in `$WS/$PKG_PATH/debian/`
 4. Script runs automatically during build
+5. After any change to `patches.sh`, run the same cleanup + `bloom-generate` flow from `build.sh`
+   and verify the patched `debian/` output for the affected package
+
+**Example test flow (for one package):**
+```bash
+pkg_path="src/ros2/rviz/rviz_default_plugins"
+rm -rf "$pkg_path/debian" "$pkg_path/.obj-"* "$pkg_path/.debhelper" || true
+( cd "$pkg_path" && bloom-generate rosdebian --ros-distro jazzy --os-name debian --os-version trixie )
+./patches.sh "$pkg_path"
+```
 
 **Example:**
 ```bash

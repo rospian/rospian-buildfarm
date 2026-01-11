@@ -121,11 +121,38 @@ PY
 
     pushd "$pkg_path" >/dev/null
 
-    echo -e "\n== $pkg_name: ($index)" | tee -a "$PROGRESS_LOG"
+    echo -e "\n##############################################################################\n# PACKAGE: $pkg_name ($index)\n##############################################################################" | tee -a "$PROGRESS_LOG"
     if [ ! -d "debian" ] || [ $force_bloom -eq 1 ]; then
       # Copy patched files from patches directory if they exist (before bloom)
       if [ -d "$WS/patches/$pkg_path" ]; then
         echo "== $pkg_name: applying file patches from patches/$pkg_path (pre-bloom)" | tee -a "$PROGRESS_LOG"
+        patch_log_dir="$SBUILD_DIR/logs/patches/${timestamp}/${pkg_name}"
+        patch_diff_dir="$WS/diff/src/$pkg_path"
+        mkdir -p "$patch_diff_dir"
+        mkdir -p "$patch_log_dir"
+        while IFS= read -r -d '' patch_file; do
+          rel_path="${patch_file#$WS/patches/$pkg_path/}"
+          target_file="$WS/$pkg_path/$rel_path"
+          diff_file="$patch_log_dir/${rel_path}.diff"
+          diff_save_file="$patch_diff_dir/${rel_path}.diff"
+          mkdir -p "$(dirname "$diff_file")"
+          mkdir -p "$(dirname "$diff_save_file")"
+          if [ -f "$target_file" ]; then
+            diff -u --label "a/${rel_path}" --label "b/${rel_path}" \
+              "$target_file" "$patch_file" > "$diff_file" || true
+          else
+            diff -u --label "a/${rel_path}" --label "b/${rel_path}" \
+              /dev/null "$patch_file" > "$diff_file" || true
+          fi
+          if [ -s "$diff_file" ]; then
+            cp "$diff_file" "$diff_save_file"
+            echo "== $pkg_name: patch diff $diff_file" | tee -a "$PROGRESS_LOG"
+            cat "$diff_file" | tee -a "$PROGRESS_LOG"
+          else
+            rm -f "$diff_save_file"
+            echo "== $pkg_name: patch diff $diff_file (no changes)" | tee -a "$PROGRESS_LOG"
+          fi
+        done < <(find "$WS/patches/$pkg_path" -type f -print0)
         cp -r "$WS/patches/$pkg_path"/* "$WS/$pkg_path/"
       fi
 
