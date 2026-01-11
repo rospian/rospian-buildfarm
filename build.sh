@@ -18,6 +18,7 @@ TARGET_PKG="${1:-}"
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
 SEQUENCE="$WS/sequence"
+SEQUENCE_PATHS="$WS/sequence-paths"
 XREFERENCE="$SBUILD_DIR/xreference"
 force_build=0
 # Always force bloom generation on first run to ensure patches are applied
@@ -87,6 +88,9 @@ mv -f "$SBUILD_RESULTS"/*.dsc \
       "$SBUILD_RESULTS"/*.buildinfo \
       "$SBUILD_DIR/artifacts" 2>/dev/null || true
 
+# Remove colcon logs      
+rm -fR $SBUILD_DIR/log
+
 pass=1
 retry=1
 
@@ -115,7 +119,7 @@ PY
 
     pushd "$pkg_path" >/dev/null
 
-    echo -e "\n" | tee -a "$PROGRESS_LOG"
+    echo -e "\n== $pkg_name: ($index)" | tee -a "$PROGRESS_LOG"
     if [ ! -d "debian" ] || [ $force_bloom -eq 1 ]; then
       # Copy patched files from patches directory if they exist (before bloom)
       if [ -d "$WS/patches/$pkg_path" ]; then
@@ -123,7 +127,7 @@ PY
         cp -r "$WS/patches/$pkg_path"/* "$WS/$pkg_path/"
       fi
 
-      echo "== ($index) $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
+      echo "== $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
       rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
       if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
         popd >/dev/null
@@ -139,9 +143,11 @@ PY
     # Identify debian package name
     src_name="$(dpkg-parsechangelog -S Source 2>/dev/null || true)"
 
-    echo "== ($index) $pkg_name: $pkg_path -- $src_name" | tee -a "$PROGRESS_LOG"
+    echo "== $pkg_name: $pkg_path -- $src_name" | tee -a "$PROGRESS_LOG"
 
-    if ! awk -v p="$pkg_path" '$3==p {found=1; exit} END{exit !found}' "$XREFERENCE" 2>/dev/null; then
+    if ! awk -v s="$src_name" -v n="$pkg_name" -v p="$pkg_path" \
+      '$1==s && $2==n && $3==p {found=1; exit} END{exit !found}' \
+      "$XREFERENCE" 2>/dev/null; then
       echo "$src_name $pkg_name $pkg_path" >> $XREFERENCE
     fi
 
@@ -310,6 +316,10 @@ EOF
     # Only append to sequence if not already present
     if ! grep -Fxq "$pkg_name" "$SEQUENCE" 2>/dev/null; then
       echo $pkg_name >> $SEQUENCE
+    fi
+    # Only append to sequence-paths if not already present
+    if ! grep -Fxq "$pkg_path" "$SEQUENCE_PATHS" 2>/dev/null; then
+      echo $pkg_path >> $SEQUENCE_PATHS
     fi
     echo "== $pkg_name: DONE" | tee -a "$PROGRESS_LOG"
   done

@@ -1,4 +1,5 @@
 repositories:
+  # From https://raw.githubusercontent.com/ros2/ros2/jazzy/ros2.repos
   ament/ament_cmake:
     type: git
     url: https://github.com/ament/ament_cmake.git
@@ -91,78 +92,78 @@ repositories:
     type: git
     url: https://github.com/ros-tooling/libstatistics_collector.git
     version: jazzy
-  # ros-visualization/interactive_markers:
-  #   type: git
-  #   url: https://github.com/ros-visualization/interactive_markers.git
-  #   version: jazzy
-  # ros-visualization/python_qt_binding:
-  #   type: git
-  #   url: https://github.com/ros-visualization/python_qt_binding.git
-  #   version: jazzy
-  # ros-visualization/qt_gui_core:
-  #   type: git
-  #   url: https://github.com/ros-visualization/qt_gui_core.git
-  #   version: jazzy
-  # ros-visualization/rqt:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt.git
-  #   version: jazzy
-  # ros-visualization/rqt_action:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_action.git
-  #   version: jazzy
-  # ros-visualization/rqt_bag:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_bag.git
-  #   version: jazzy
-  # ros-visualization/rqt_console:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_console.git
-  #   version: jazzy
-  # ros-visualization/rqt_graph:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_graph.git
-  #   version: jazzy
-  # ros-visualization/rqt_msg:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_msg.git
-  #   version: jazzy
-  # ros-visualization/rqt_plot:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_plot.git
-  #   version: jazzy
-  # ros-visualization/rqt_publisher:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_publisher.git
-  #   version: jazzy
-  # ros-visualization/rqt_py_console:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_py_console.git
-  #   version: jazzy
-  # ros-visualization/rqt_reconfigure:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_reconfigure.git
-  #   version: jazzy
-  # ros-visualization/rqt_service_caller:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_service_caller.git
-  #   version: jazzy
-  # ros-visualization/rqt_shell:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_shell.git
-  #   version: jazzy
-  # ros-visualization/rqt_srv:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_srv.git
-  #   version: jazzy
-  # ros-visualization/rqt_topic:
-  #   type: git
-  #   url: https://github.com/ros-visualization/rqt_topic.git
-  #   version: jazzy
-  # ros-visualization/tango_icons_vendor:
-  #   type: git
-  #   url: https://github.com/ros-visualization/tango_icons_vendor.git
-  #   version: jazzy
+  ros-visualization/interactive_markers:
+    type: git
+    url: https://github.com/ros-visualization/interactive_markers.git
+    version: jazzy
+  ros-visualization/python_qt_binding:
+    type: git
+    url: https://github.com/ros-visualization/python_qt_binding.git
+    version: jazzy
+  ros-visualization/qt_gui_core:
+    type: git
+    url: https://github.com/ros-visualization/qt_gui_core.git
+    version: jazzy
+  ros-visualization/rqt:
+    type: git
+    url: https://github.com/ros-visualization/rqt.git
+    version: jazzy
+  ros-visualization/rqt_action:
+    type: git
+    url: https://github.com/ros-visualization/rqt_action.git
+    version: jazzy
+  ros-visualization/rqt_bag:
+    type: git
+    url: https://github.com/ros-visualization/rqt_bag.git
+    version: jazzy
+  ros-visualization/rqt_console:
+    type: git
+    url: https://github.com/ros-visualization/rqt_console.git
+    version: jazzy
+  ros-visualization/rqt_graph:
+    type: git
+    url: https://github.com/ros-visualization/rqt_graph.git
+    version: jazzy
+  ros-visualization/rqt_msg:
+    type: git
+    url: https://github.com/ros-visualization/rqt_msg.git
+    version: jazzy
+  ros-visualization/rqt_plot:
+    type: git
+    url: https://github.com/ros-visualization/rqt_plot.git
+    version: jazzy
+  ros-visualization/rqt_publisher:
+    type: git
+    url: https://github.com/ros-visualization/rqt_publisher.git
+    version: jazzy
+  ros-visualization/rqt_py_console:
+    type: git
+    url: https://github.com/ros-visualization/rqt_py_console.git
+    version: jazzy
+  ros-visualization/rqt_reconfigure:
+    type: git
+    url: https://github.com/ros-visualization/rqt_reconfigure.git
+    version: jazzy
+  ros-visualization/rqt_service_caller:
+    type: git
+    url: https://github.com/ros-visualization/rqt_service_caller.git
+    version: jazzy
+  ros-visualization/rqt_shell:
+    type: git
+    url: https://github.com/ros-visualization/rqt_shell.git
+    version: jazzy
+  ros-visualization/rqt_srv:
+    type: git
+    url: https://github.com/ros-visualization/rqt_srv.git
+    version: jazzy
+  ros-visualization/rqt_topic:
+    type: git
+    url: https://github.com/ros-visualization/rqt_topic.git
+    version: jazzy
+  ros-visualization/tango_icons_vendor:
+    type: git
+    url: https://github.com/ros-visualization/tango_icons_vendor.git
+    version: jazzy
   ros/class_loader:
     type: git
     url: https://github.com/ros/class_loader.git
@@ -387,10 +388,10 @@ repositories:
     type: git
     url: https://github.com/ros2/rpyutils.git
     version: jazzy
-  # ros2/rviz:
-  #   type: git
-  #   url: https://github.com/ros2/rviz.git
-  #   version: jazzy
+  ros2/rviz:
+    type: git
+    url: https://github.com/ros2/rviz.git
+    version: jazzy
   ros2/spdlog_vendor:
     type: git
     url: https://github.com/ros2/spdlog_vendor.git
@@ -427,3 +428,9 @@ repositories:
     type: git
     url: https://github.com/ros2/yaml_cpp_vendor.git
     version: jazzy
+
+  # ROS2 variants  
+  ros2/variants:
+    type: git
+    url: https://github.com/ros2/variants.git
+    version: jazzy  

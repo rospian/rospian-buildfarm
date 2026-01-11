@@ -6,9 +6,55 @@ patched=0
 
 patched=1
 case "$PKG_PATH" in
-  src/*/*_vendor)
-    sed -i 's/\(Build-Depends:.*\)$/\1, vcstool, git, ca-certificates/' \
-      $WS/$PKG_PATH/debian/control
+  "src/ros2/rviz/rviz_ogre_vendor")
+    # Add OGRE plugin dir to dh_shlibdeps search path so PCZSceneManager is found
+    # Plugin_OctreeZone.so links against Plugin_PCZSceneManager.so which lives in lib/OGRE/
+    # Note: \$(CURDIR) must be escaped to prevent shell expansion
+    sed -i 's|\(rviz_ogre_vendor/lib/\)|\1:\$(CURDIR)/debian/ros-jazzy-rviz-ogre-vendor//opt/ros/jazzy/opt/rviz_ogre_vendor/lib/OGRE/|' \
+      $WS/$PKG_PATH/debian/rules
+    ;;
+
+  "src/ros2/rviz/rviz_rendering")
+    # Add rviz_ogre_vendor lib dir to dh_shlibdeps so Ogre libs resolve
+    # Note: \$(CURDIR) must be escaped to prevent shell expansion
+    sed -i 's|\(rviz_rendering/lib/\)|\1:\$(CURDIR)/debian/ros-jazzy-rviz-rendering//opt/ros/jazzy/opt/rviz_ogre_vendor/lib/:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib/|' \
+      $WS/$PKG_PATH/debian/rules
+    ;;
+
+  "src/ros2/rviz/rviz_default_plugins")
+    # Add gz_math_vendor, gz_cmake_vendor, and gz_utils_vendor prefixes so CMake can find gz-math7 and its dependencies
+    # gz-math7 internally requires gz-utils2 which is installed under gz_utils_vendor
+    sed -i 's|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy\"|-DAMENT_PREFIX_PATH=\"/opt/ros/jazzy:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy/opt/gz_utils_vendor\"|' \
+      $WS/$PKG_PATH/debian/rules
+    # Pin gz-math7_DIR, gz-cmake3_DIR, and gz-utils2_DIR to vendor install paths for reliable discovery
+    # The original -DCMAKE_PREFIX_PATH line already has a trailing backslash, so we just update the value
+    # and insert the new -D lines after it (they also need backslashes since $(BUILD_TESTING_ARG) follows)
+    if ! grep -q 'gz-math7_DIR' "$WS/$PKG_PATH/debian/rules"; then
+      sed -i 's|-DCMAKE_PREFIX_PATH=\"/opt/ros/jazzy\"|-DCMAKE_PREFIX_PATH=\"/opt/ros/jazzy:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy/opt/gz_utils_vendor\"|' \
+        $WS/$PKG_PATH/debian/rules
+      awk '
+        { print }
+        /-DCMAKE_PREFIX_PATH=.*gz_math_vendor/ {
+          print "\t\t-Dgz-math7_DIR=\"/opt/ros/jazzy/opt/gz_math_vendor/lib/cmake/gz-math7\" \\"
+          print "\t\t-Dgz-cmake3_DIR=\"/opt/ros/jazzy/opt/gz_cmake_vendor/share/cmake/gz-cmake3\" \\"
+          print "\t\t-Dgz-utils2_DIR=\"/opt/ros/jazzy/opt/gz_utils_vendor/lib/cmake/gz-utils2\" \\"
+        }
+      ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+      mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+    fi
+    # Add rviz_ogre_vendor and gz_math_vendor lib dirs to dh_shlibdeps so Ogre and gz-math libs resolve
+    if ! grep -q "/opt/ros/jazzy/opt/rviz_ogre_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+      sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib|' \
+        $WS/$PKG_PATH/debian/rules
+    fi
+    ;;
+
+  "src/ros2/rviz/rviz_common")
+    # Add rviz_ogre_vendor lib dir to dh_shlibdeps so Ogre libs resolve
+    if ! grep -q "/opt/ros/jazzy/opt/rviz_ogre_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+      sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib|' \
+        $WS/$PKG_PATH/debian/rules
+    fi
     ;;
 
   "src/ros2/rosidl_dynamic_typesupport")
@@ -113,6 +159,20 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     # Add system library path to dh_shlibdeps to find liburdfdom_model.so
     sed -i 's|\(dh_shlibdeps -l[^ ]*\)|\1:/usr/lib/aarch64-linux-gnu|' \
       $WS/$PKG_PATH/debian/rules
+    ;;
+
+  "src/ros-visualization/qt_gui_core/qt_gui")
+    # Use python3-pyqt5.sip; python3-sip(-dev) is not available in Trixie
+    sed -i -e 's/python3-sip-dev/python3-pyqt5.sip/g' \
+      -e 's/python3-sip\>/python3-pyqt5.sip/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
+  "src/ros-visualization/python_qt_binding")
+    # Use python3-pyqt5.sip; python3-sip(-dev) is not available in Trixie
+    sed -i -e 's/python3-sip-dev/python3-pyqt5.sip/g' \
+      -e 's/python3-sip\>/python3-pyqt5.sip/g' \
+      $WS/$PKG_PATH/debian/control
     ;;
 
   "src/ros/urdfdom")
@@ -230,6 +290,13 @@ if [ $patched -eq 1 ]; then
   echo "== Applied custom patch to $PKG_PATH"
 fi
 
+# Generic vendor package handling
+if [[ "$PKG_PATH" == src/*/*_vendor ]]; then
+  sed -i 's/\(Build-Depends:.*\)$/\1, vcstool, git, ca-certificates/' \
+    $WS/$PKG_PATH/debian/control
+  echo "== Applied generic vendor Build-Depends fix to $PKG_PATH"
+fi
+
 # Generic fix: if a package has dh_shlibdeps with -l but doesn't include
 # /opt/ros/jazzy/lib, add it to find ROS libraries from build dependencies
 if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
@@ -273,4 +340,14 @@ if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
   sed -i 's|if \[ -f "/opt/ros/jazzy/setup.sh" \]; then \. "/opt/ros/jazzy/setup.sh"; fi && \\|export PYTHONPATH="/opt/ros/jazzy/lib/python3.13/site-packages:$$PYTHONPATH" \&\& \\|' \
     "$WS/$PKG_PATH/debian/rules"
   echo "== Applied Python path fix to $PKG_PATH"
+fi
+
+# Generic fix: Enable parallel builds in debian/rules
+# Bloom generates debhelper compat level 9, which requires explicit --parallel flag
+# (compat 10+ enables parallel automatically from DEB_BUILD_OPTIONS)
+if [ -f "$WS/$PKG_PATH/debian/rules" ] && \
+   grep -q 'dh $@' "$WS/$PKG_PATH/debian/rules" && \
+   ! grep -q 'dh $@ --parallel\|dh $@ .* --parallel' "$WS/$PKG_PATH/debian/rules"; then
+  sed -i 's/dh $@ /dh $@ --parallel /' "$WS/$PKG_PATH/debian/rules"
+  echo "== Enabled parallel builds for $PKG_PATH"
 fi
