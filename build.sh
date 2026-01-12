@@ -69,6 +69,23 @@ cleanup_pytest_cache() {
     find /opt/ros/jazzy/lib/python3.13/site-packages -path '*/.pytest_cache' -prune -exec rm -rf {} + || true
 }
 
+format_elapsed() {
+  local total="$1"
+  local mins=$((total / 60))
+  local secs=$((total % 60))
+  printf "%dm%02ds" "$mins" "$secs"
+}
+
+log_pkg_elapsed() {
+  local status="$1"
+  if [ -n "${pkg_start_time:-}" ]; then
+    local end
+    end=$(date +%s)
+    local elapsed=$((end - pkg_start_time))
+    echo "== $pkg_name: $status (elapsed $(format_elapsed "$elapsed"))" | tee -a "$PROGRESS_LOG"
+  fi
+}
+
 if [ ${#TARGET_PKGS[@]} -gt 0 ]; then
   # Limit to the requested package path(s)
   PKG_PATHS=("${TARGET_PKGS[@]}")
@@ -122,6 +139,7 @@ PY
     pushd "$pkg_path" >/dev/null
 
     echo -e "\n##############################################################################\n# PACKAGE: $pkg_name ($index)\n##############################################################################" | tee -a "$PROGRESS_LOG"
+    pkg_start_time=$(date +%s)
     if [ ! -d "debian" ] || [ $force_bloom -eq 1 ]; then
       # Copy patched files from patches directory if they exist (before bloom)
       if [ -d "$WS/patches/$pkg_path" ]; then
@@ -311,6 +329,7 @@ EOF
       echo "!! $pkg_name: sbuild failed (likely missing deps); retrying in later pass" | tee -a "$PROGRESS_LOG"
       echo "!! $pkg_name: see log $WS/$buildLog" | tee -a "$PROGRESS_LOG"
       retry=1
+      log_pkg_elapsed "sbuild failed"
       continue
     fi
 
@@ -350,7 +369,7 @@ EOF
     if ! grep -Fxq "$pkg_path" "$SEQUENCE_PATHS" 2>/dev/null; then
       echo $pkg_path >> $SEQUENCE_PATHS
     fi
-    echo "== $pkg_name: DONE" | tee -a "$PROGRESS_LOG"
+    log_pkg_elapsed "DONE"
   done
 
   echo "Built $build_count packages" | tee -a "$PROGRESS_LOG"
