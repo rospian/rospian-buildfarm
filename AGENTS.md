@@ -20,6 +20,7 @@ for Raspberry Pi OS / Debian Trixie (arm64).
 - OS: Debian / Raspberry Pi OS Trixie
 - Builds run in clean schroot environments
 - Current schroot requires `--directory /` on invocations
+- Builds can be slow; when invoking build.sh via the agent, use long timeouts (20+ minutes) per run
 
 ## Style
 - Be conservative

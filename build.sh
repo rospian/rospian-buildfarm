@@ -15,7 +15,7 @@ PARALLEL_JOBS="${PARALLEL_JOBS:-$(($(nproc) - 1))}"
 SBUILD_DIR="$WS/sbuild"
 SBUILD_CHROOT="${SBUILD_CHROOT:-trixie-arm64-sbuild}"
 SOURCE_CHROOT="source:${SBUILD_CHROOT}"
-TARGET_PKG="${1:-}"
+TARGET_PKGS=("$@")
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
 SEQUENCE="$WS/sequence"
@@ -69,9 +69,9 @@ cleanup_pytest_cache() {
     find /opt/ros/jazzy/lib/python3.13/site-packages -path '*/.pytest_cache' -prune -exec rm -rf {} + || true
 }
 
-if [ -n "$TARGET_PKG" ]; then
-  # Limit to the requested package name
-  PKG_PATHS=($TARGET_PKG)
+if [ ${#TARGET_PKGS[@]} -gt 0 ]; then
+  # Limit to the requested package path(s)
+  PKG_PATHS=("${TARGET_PKGS[@]}")
   force_build=1
 else
   # List package paths (one per ROS package, even if many live in one repo)
@@ -90,7 +90,7 @@ mv -f "$SBUILD_RESULTS"/*.dsc \
       "$SBUILD_DIR/artifacts" 2>/dev/null || true
 
 # Remove colcon logs      
-rm -fR $SBUILD_DIR/log
+rm -fR $WS/log
 
 pass=1
 retry=1
