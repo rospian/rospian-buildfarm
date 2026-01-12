@@ -13,9 +13,9 @@ shell = "prompt"
 
 [permissions.paths]
 write = [
-  "ros2_base/patches/**",
-  "ros2_base/sbuild/**",
-  "ros2_base/patches.sh",
+  "ros2/patches/**",
+  "ros2/sbuild/**",
+  "ros2/patches.sh",
   "build.sh",
   "/tmp/**",
 ]

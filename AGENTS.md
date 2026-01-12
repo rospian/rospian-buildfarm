@@ -110,6 +110,6 @@ Where `<package_path>` is the relative path from the workspace root to the packa
 ```
 
 **Notes:**
-- The script automatically changes to the workspace directory (defaults to ros2_base/)
+- The script automatically changes to the workspace directory (defaults to ros2/)
 - Package path must be relative to the workspace, not absolute
 - When building a specific package, the script sets `force_build=1`

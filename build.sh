@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-ROS_SUBDIR="${ROS_SUBDIR:-ros2_base}"
+ROS_SUBDIR="${ROS_SUBDIR:-ros2}"
 WS="${WS:-$SCRIPT_DIR/$ROS_SUBDIR}"
 ROS_DISTRO="${ROS_DISTRO:-jazzy}"
 OS_DIST=trixie

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Download vendor package sources that cannot be fetched during build
 # (Debian builds run in network-disconnected environments).
-# Usage: run from the workspace root (ros2_base) or anywhere; paths are resolved
+# Usage: run from the workspace root (ros2) or anywhere; paths are resolved
 # relative to this script's location.
 # Environment: relies on curl and tar; writes into src/.
 

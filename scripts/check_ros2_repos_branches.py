@@ -44,13 +44,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--repos",
-        default="ros2_base/ros2.repos",
-        help="Path to ros2.repos (default: ros2_base/ros2.repos)",
+        default="ros2/ros2.repos",
+        help="Path to ros2.repos (default: ros2/ros2.repos)",
     )
     parser.add_argument(
         "--src",
-        default="ros2_base/src",
-        help="Source workspace root (default: ros2_base/src)",
+        default="ros2/src",
+        help="Source workspace root (default: ros2/src)",
     )
     args = parser.parse_args()
 

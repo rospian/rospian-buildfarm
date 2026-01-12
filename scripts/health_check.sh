@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 SCRIPT_PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-ROS_SUBDIR="${ROS_SUBDIR:-ros2_base}"
+ROS_SUBDIR="${ROS_SUBDIR:-ros2}"
 WS="${WS:-$SCRIPT_PARENT_DIR/$ROS_SUBDIR}"
 SBUILD_DIR="$WS/sbuild"
 

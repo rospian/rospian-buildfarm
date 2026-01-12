@@ -301,7 +301,7 @@ $eatmydata = 1;
 ## 4. Retrieving the source packages
 
 ```
-cd ros2_base/src
+cd ros2/src
 vcs import src --debug < ./ros2.repos
 ./fetch_vendor_sources.sh
 ```
@@ -346,9 +346,9 @@ The build script:
 ### Run the script
 
 ```bash
-ROS_SUBDIR=ros2_base     wip/build_all_repos.sh
-ROS_SUBDIR=ros2_control wip/build_all_repos.sh
-ROS_SUBDIR=ros2_vision  wip/build_all_repos.sh
+ROS_SUBDIR=ros2     wip/build.sh
+ROS_SUBDIR=ros2_control wip/build.sh
+ROS_SUBDIR=ros2_vision  wip/build.sh
 ```
 
 Packages that fail due to missing dependencies are retried automatically in later passes once their dependencies have been built and published.
@@ -389,7 +389,7 @@ Sometimes upstream versions need nudging:
 ```bash
 sed -i \
   's/<version>1.3.1<\/version>/<version>1.3.2<\/version>/' \
-  ~/ros2_jazzy/ros2_base/src/eProsima/foonathan_memory_vendor/package.xml
+  ~/ros2_jazzy/ros2/src/eProsima/foonathan_memory_vendor/package.xml
 ```
 
 ---
