@@ -109,10 +109,12 @@ mv -f "$SBUILD_RESULTS"/*.dsc \
 # Remove colcon logs      
 rm -fR $WS/log
 
-pass=1
+pass=0
 retry=1
 
 while [ $retry -eq 1 ]; do
+  pass=$((pass + 1))
+
   PROGRESS_LOG="$SBUILD_DIR/logs/progress_${timestamp}_${pass}.log"
   ln -sf $PROGRESS_LOG $SBUILD_DIR/logs/progress_latest.log
   echo "===== PASS $pass =====" | tee -a "$PROGRESS_LOG"
@@ -377,7 +379,6 @@ EOF
     break
   fi
 
-  pass=$((pass + 1))
   force_bloom=0
 
 done

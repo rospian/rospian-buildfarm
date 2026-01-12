@@ -5456,56 +5456,56 @@ libogre:
 libpcl-all:
   debian:
     trixie:
-      - libpcl-apps1.13
-      - libpcl-common1.13
-      - libpcl-features1.13
-      - libpcl-filters1.13
-      - libpcl-io1.13
-      - libpcl-kdtree1.13
-      - libpcl-keypoints1.13
-      - libpcl-ml1.13
-      - libpcl-octree1.13
-      - libpcl-outofcore1.13
-      - libpcl-people1.13
-      - libpcl-recognition1.13
-      - libpcl-registration1.13
-      - libpcl-sample-consensus1.13
-      - libpcl-search1.13
-      - libpcl-segmentation1.13
-      - libpcl-stereo1.13
-      - libpcl-surface1.13
-      - libpcl-tracking1.13
-      - libpcl-visualization1.13
+      - libpcl-apps1.15
+      - libpcl-common1.15
+      - libpcl-features1.15
+      - libpcl-filters1.15
+      - libpcl-io1.15
+      - libpcl-kdtree1.15
+      - libpcl-keypoints1.15
+      - libpcl-ml1.15
+      - libpcl-octree1.15
+      - libpcl-outofcore1.15
+      - libpcl-people1.15
+      - libpcl-recognition1.15
+      - libpcl-registration1.15
+      - libpcl-sample-consensus1.15
+      - libpcl-search1.15
+      - libpcl-segmentation1.15
+      - libpcl-stereo1.15
+      - libpcl-surface1.15
+      - libpcl-tracking1.15
+      - libpcl-visualization1.15
 
 libpcl-common:
   debian:
     trixie:
-      - libpcl-common1.13
+      - libpcl-common1.15
 
 libpcl-features:
   debian:
     trixie:
-      - libpcl-features1.13
+      - libpcl-features1.15
 
 libpcl-filters:
   debian:
     trixie:
-      - libpcl-filters1.13
+      - libpcl-filters1.15
 
 libpcl-io:
   debian:
     trixie:
-      - libpcl-io1.13
+      - libpcl-io1.15
 
 libpcl-segmentation:
   debian:
     trixie:
-      - libpcl-segmentation1.13
+      - libpcl-segmentation1.15
 
 libpcl-surface:
   debian:
     trixie:
-      - libpcl-surface1.13
+      - libpcl-surface1.15
 
 libphidget22:
   debian:

@@ -155,6 +155,30 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
       $WS/$PKG_PATH/debian/rules
     ;;
 
+  "src/ros-perception/vision_opencv/cv_bridge")
+    # Debian Trixie ships Boost.Python 1.83; replace the Bookworm 1.74 runtime dependency
+    sed -i 's/libboost-python1\.74\.0/libboost-python1.83.0/' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
+  "src/ros-perception/perception_pcl/pcl_conversions")
+    # Trixie ships PCL 1.15; replace Bookworm's 1.13 runtime libs
+    sed -i -e 's/libpcl-common1\.13/libpcl-common1.15/g' \
+           -e 's/libpcl-io1\.13/libpcl-io1.15/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
+  "src/ros-perception/perception_pcl/pcl_ros")
+    # Trixie ships PCL 1.15; replace Bookworm's 1.13 runtime libs
+    sed -i -e 's/libpcl-common1\.13/libpcl-common1.15/g' \
+           -e 's/libpcl-features1\.13/libpcl-features1.15/g' \
+           -e 's/libpcl-filters1\.13/libpcl-filters1.15/g' \
+           -e 's/libpcl-io1\.13/libpcl-io1.15/g' \
+           -e 's/libpcl-segmentation1\.13/libpcl-segmentation1.15/g' \
+           -e 's/libpcl-surface1\.13/libpcl-surface1.15/g' \
+      $WS/$PKG_PATH/debian/control
+    ;;
+
   "src/ros/sdformat_urdf/sdformat_urdf")
     # Add sdformat_vendor + gz_math_vendor lib dirs to dh_shlibdeps so libsdformat14/libgz-math7 resolve
     if ! grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
@@ -383,7 +407,6 @@ if [ -n "$diff_tmp" ]; then
     if ! diff -u --label "a/debian/control" --label "b/debian/control" \
       "$control_before" "$WS/$PKG_PATH/debian/control" > "$diff_dir/control.diff"; then
       echo "== debian/control diff for $PKG_PATH"
-      cat "$diff_dir/control.diff"
     else
       rm -f "$diff_dir/control.diff"
     fi
@@ -392,7 +415,6 @@ if [ -n "$diff_tmp" ]; then
     if ! diff -u --label "a/debian/rules" --label "b/debian/rules" \
       "$rules_before" "$WS/$PKG_PATH/debian/rules" > "$diff_dir/rules.diff"; then
       echo "== debian/rules diff for $PKG_PATH"
-      cat "$diff_dir/rules.diff"
     else
       rm -f "$diff_dir/rules.diff"
     fi
