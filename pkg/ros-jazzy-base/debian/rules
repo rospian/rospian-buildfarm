@@ -1,9 +1,0 @@
-#!/usr/bin/make -f
-
-%:
-	dh $@
-
-override_dh_gencontrol:
-	# Generate a substvars file that defines ros_jazzy_all:Depends
-	./debian/gen-depends.sh > debian/ros-jazzy-base.substvars
-	dh_gencontrol -- -Tdebian/ros-jazzy-base.substvars

@@ -346,24 +346,12 @@ The build script:
 ### Run the script
 
 ```bash
-ROS_SUBDIR=ros2_base     wip/build.sh
-ROS_SUBDIR=ros2_control wip/build.sh
-ROS_SUBDIR=ros2_vision  wip/build.sh
+ROS_SUBDIR=ros2_base     wip/build_all_repos.sh
+ROS_SUBDIR=ros2_control wip/build_all_repos.sh
+ROS_SUBDIR=ros2_vision  wip/build_all_repos.sh
 ```
 
 Packages that fail due to missing dependencies are retried automatically in later passes once their dependencies have been built and published.
-
-### Build pkg/* packages
-
-On succesful completion of the ROS2 packages build, the meta packages can be built.
-
-Use `pkg/build_meta_pkg.sh` for the standalone `pkg/` workspace (meta packages):
-
-```bash
-pkg/build.sh ros-jazzy-base
-```
-
-This runs a local `dpkg-buildpackage`, then a clean `sbuild`, and finally publishes the resulting `.changes` to the local `reprepro` repo.
 
 ---
 

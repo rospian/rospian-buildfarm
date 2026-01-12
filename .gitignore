@@ -1,16 +1,6 @@
 */src/**
 */sbuild/**
-*.build
-*.buildinfo
-*.changes
-*.deb
-*.dsc
-*.tar.xz
-*.tar.gz
-pkg/*/debian/.debhelper/
-pkg/*/debian/ros-jazzy-*
-pkg/*/debian/debhelper-build-stamp
-pkg/*/debian/files
+*/*.build
 **/log
 nohup.out
 dpkg-source.log
