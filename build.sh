@@ -95,19 +95,21 @@ else
   colcon --log-base /dev/null list --base-paths src --paths-only 2>/dev/null | sort > $SBUILD_DIR/all_packages
   # Exclude skipped packages
   grep -Fvx -f skip_packages $SBUILD_DIR/all_packages > $SBUILD_DIR/inc_packages
-  mapfile -t PKG_PATHS < $SBUILD_DIR/inc_packages
-  # Remove old progress logs
-  rm -f "$SBUILD_DIR/logs/progress_"*.log
+  # Prefer the known-good build order, then append any remaining packages.
+  ordered_packages="$SBUILD_DIR/ordered_packages"
+  if [ -s "$SEQUENCE_PATHS" ]; then
+    awk 'NF && FNR==NR{inc[$0]=1; next} NF {if ($0 in inc) print $0}' \
+      "$SBUILD_DIR/inc_packages" "$SEQUENCE_PATHS" > "$ordered_packages"
+    awk 'NF && FNR==NR{seq[$0]=1; next} NF {if (!($0 in seq)) print $0}' \
+      "$SEQUENCE_PATHS" "$SBUILD_DIR/inc_packages" >> "$ordered_packages"
+  else
+    cp "$SBUILD_DIR/inc_packages" "$ordered_packages"
+  fi
+  mapfile -t PKG_PATHS < <(awk 'NF' "$ordered_packages")
 fi
 
-mv -f "$SBUILD_RESULTS"/*.dsc \
-      "$SBUILD_RESULTS"/*.changes \
-      "$SBUILD_RESULTS"/*.deb \
-      "$SBUILD_RESULTS"/*.buildinfo \
-      "$SBUILD_DIR/artifacts" 2>/dev/null || true
-
-# Remove colcon logs      
-rm -fR $WS/log
+# Remove old logs
+rm -fR $SBUILD_DIR/logs/*.log $WS/log
 
 pass=0
 retry=1
@@ -178,12 +180,15 @@ PY
 
       echo "== $pkg_name: bloom-generate rosdebian in $pkg_path" | tee -a "$PROGRESS_LOG"
       rm -rf "$pkg_path/debian" "$pkg_path/.obj-*" "$pkg_path/.debhelper" || true
-      if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" ; then
+      bloom_log="$SBUILD_DIR/logs/bloom_${timestamp}_${pkg_name}.log"
+      if ! bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name debian --os-version "$OS_DIST" > "$bloom_log" 2>&1 ; then
+        cat "$bloom_log" >> "$PROGRESS_LOG"
         popd >/dev/null
         echo "!! $pkg_name: bloom failed (will retry next pass)" | tee -a "$PROGRESS_LOG"
         retry=1
         continue
       fi
+      rm -f "$bloom_log"
 
       # Apply patches for ros-jazzy packaging
       $WS/patches.sh "$pkg_path" | tee -a "$PROGRESS_LOG"
@@ -380,6 +385,7 @@ EOF
   fi
 
   force_bloom=0
+  force_build=0
 
 done
 
