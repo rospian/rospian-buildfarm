@@ -30,13 +30,15 @@ sudo apt install -y \
   git build-essential cmake \
   fakeroot devscripts debhelper dh-python \
   sbuild reprepro schroot debootstrap \
-  python3-bloom python3-rosdep2 \
+  python3-bloom python3-rosdep2 python3-vcstool \
+  gnupg \
   python3-all
 ```
 
 Notes:
 
 * `python3-all` is required for many ROS Python packages
+* `python3-vcstool` provides the `vcs` command used below
 * `sbuild` + `schroot` provide clean, isolated builds
 * `reprepro` manages the local APT repository
 
@@ -301,8 +303,8 @@ $eatmydata = 1;
 ## 4. Retrieving the source packages
 
 ```
-cd ros2/src
-vcs import src --debug < ./ros2.repos
+cd ros2
+vcs import src --debug < ros2.repos
 ./fetch_vendor_sources.sh
 ```
 
@@ -312,7 +314,7 @@ bloom/sbuild can build without network access.
 
 ## 5. Configure rosdep for Debian Trixie
 
-Copy:
+Copy (as root):
 
 * `rosdep/10-debian-trixie.yaml`
 * `rosdep/10-debian-trixie.list`
@@ -321,6 +323,14 @@ into:
 
 ```bash
 /etc/ros/rosdep/sources.list.d/
+```
+
+Example:
+
+```bash
+sudo mkdir -p /etc/ros/rosdep/sources.list.d
+sudo install -m 0644 rosdep/10-debian-trixie.yaml /etc/ros/rosdep/sources.list.d/
+sudo install -m 0644 rosdep/10-debian-trixie.list /etc/ros/rosdep/sources.list.d/
 ```
 
 Then update rosdep:
@@ -338,6 +348,7 @@ The name of the files is important as they need to precede any other files in `/
 The build script:
 
 * runs `bloom-generate`
+* patches debian rules and control via `patches.sh` (this took a lot of hard work to put together and may not be pretty) and via `ros2/patches/` overrides
 * creates source packages **without installing build-deps on host**
 * runs `sbuild` against `.dsc`
 * publishes `.changes` into the local repo
@@ -346,12 +357,22 @@ The build script:
 ### Run the script
 
 ```bash
-ROS_SUBDIR=ros2     wip/build.sh
-ROS_SUBDIR=ros2_control wip/build.sh
-ROS_SUBDIR=ros2_vision  wip/build.sh
+./build.sh
 ```
 
 Packages that fail due to missing dependencies are retried automatically in later passes once their dependencies have been built and published.
+
+The dependencies are built in the order of `ros2/sequence-paths` to limit the number of passes.
+An unreasonable amount of time went into recording this order (ask Claude and Codex about it some day).
+Nevertheless, note that the overall build takes a very, very long time ... bring snacks.
+
+### Build a single package
+
+Use a path relative to the repository root:
+
+```bash
+./build.sh src/ros2/rosidl/rosidl_cmake
+```
 
 ---
 
@@ -360,12 +381,10 @@ Packages that fail due to missing dependencies are retried automatically in late
 If you need to rebuild everything from scratch, reinitialize `/srv/aptrepo`:
 
 ```bash
-rm -rf /srv/aptrepo/{db,dists,pool}/*
+rm -rf /srv/aptrepo/{conf,db,dists,pool,incoming}/*
 reprepro -b /srv/aptrepo export
 sudo apt update
 ```
-
-**Note:** This only clears the repository. Built `.deb` files in your workspace remain untouched. To force rebuilding packages, also remove the `debian/` directories from source packages or delete built `.deb` files.
 
 ---
 
@@ -384,12 +403,14 @@ sudo apt update
 
 ### Version mismatch in upstream package.xml
 
-Sometimes upstream versions need nudging:
+Sometimes upstream versions may need nudging. Prefer using `ros2/patches/` so the change is applied consistently by `build.sh`:
 
 ```bash
+cp ros2/src/eProsima/foonathan_memory_vendor/package.xml \
+  ros2/patches/src/eProsima/foonathan_memory_vendor/package.xml
 sed -i \
   's/<version>1.3.1<\/version>/<version>1.3.2<\/version>/' \
-  ~/ros2_jazzy/ros2/src/eProsima/foonathan_memory_vendor/package.xml
+  ros2/patches/src/eProsima/foonathan_memory_vendor/package.xml
 ```
 
 ---
@@ -427,6 +448,7 @@ Think in passes:
 
 Failures due to missing dependencies are **expected and correct**.
 The system converges automatically.
+The build is done in the order specified in `ros2/sequence-paths` which is optimised to do it in as few passes as possible.
 
 ---
 
@@ -440,6 +462,8 @@ You now have:
 * a workflow that mirrors Debian + ROS build farms
 
 This is the *right* way to build ROS on Debian Trixie.
+
+## And what's next?
 
 If you want next steps, good follow-ons are:
 
