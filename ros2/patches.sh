@@ -121,6 +121,215 @@ Provides: libgeometry-msgs-dev, python3-geometry-msgs, ros-geometry-msgs' \
       $WS/$PKG_PATH/debian/control
     ;;
 
+  "src/gazebosim/ros_gz/ros_gz_bridge")
+    # Ensure gz-transport13 and gz-msgs10 CMake configs are discoverable during configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      # Ensure /opt/ros/jazzy/lib is on LD_LIBRARY_PATH for Python-generated steps.
+      # Insert after each setup.sh or PYTHONPATH export line to cover configure/build/test/install.
+      sed -i '/export LD_LIBRARY_PATH="\/opt\/ros\/jazzy\/lib/d' "$WS/$PKG_PATH/debian/rules"
+      awk '
+        {
+          print
+          if (index($0, "if [ -f \"/opt/ros/jazzy/setup.sh\" ]; then . \"/opt/ros/jazzy/setup.sh\"; fi && \\") > 0 ||
+              index($0, "export PYTHONPATH=\"/opt/ros/jazzy/lib/python3.13/site-packages:$$PYTHONPATH\" && \\") > 0) {
+            print "\texport LD_LIBRARY_PATH=\"/opt/ros/jazzy/lib:/opt/ros/jazzy/lib/${DEB_HOST_MULTIARCH}:$$LD_LIBRARY_PATH\" && \\"
+          }
+        }' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.tmp"
+      mv "$WS/$PKG_PATH/debian/rules.tmp" "$WS/$PKG_PATH/debian/rules"
+      # Ensure dh_shlibdeps can locate gz transport and msgs vendor libs.
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebosim/ros_gz/ros_gz_image" | \
+  "src/gazebosim/ros_gz/test_ros_gz_bridge")
+    # Ensure gz-transport13 and gz-msgs10 CMake configs are discoverable during configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      # Ensure dh_shlibdeps can locate gz transport and msgs vendor libs.
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebosim/ros_gz/ros_gz_sim")
+    # Ensure gz-transport13 and gz-msgs10 CMake configs are discoverable during configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-log"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13-parameters"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_sim_vendor/lib/cmake/gz-sim8" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_sim_vendor/lib/cmake/gz-sim8"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-loader" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-loader"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-register" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-register"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      # Include remaining gz/SDFormat vendor CMake package roots to avoid
+      # follow-on missing config errors during configure.
+      for prefix in \
+        /opt/ros/jazzy/opt/gz_cmake_vendor/lib/cmake/gz-cmake3 \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5 \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-av \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-events \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-graphics \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-geospatial \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-io \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler \
+        /opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-testing \
+        /opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib/cmake/gz-fuel_tools9 \
+        /opt/ros/jazzy/opt/gz_gui_vendor/lib/cmake/gz-gui8 \
+        /opt/ros/jazzy/opt/gz_rendering_vendor/lib/cmake/gz-rendering8 \
+        /opt/ros/jazzy/opt/gz_sensors_vendor/lib/cmake/gz-sensors8 \
+        /opt/ros/jazzy/opt/gz_physics_vendor/lib/cmake/gz-physics7 \
+        /opt/ros/jazzy/opt/gz_tools_vendor/lib/cmake/gz-tools2 \
+        /opt/ros/jazzy/opt/gz_utils_vendor/lib/cmake/gz-utils2 \
+        /opt/ros/jazzy/opt/gz_math_vendor/lib/cmake/gz-math7 \
+        /opt/ros/jazzy/opt/sdformat_vendor/lib/cmake/sdformat14; do
+        if ! grep -q "$prefix" "$WS/$PKG_PATH/debian/rules"; then
+          sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;'"$prefix"'"|' \
+            $WS/$PKG_PATH/debian/rules
+        fi
+      done
+      # Also include base vendor prefixes so any remaining component configs resolve.
+      for prefix in \
+        /opt/ros/jazzy/opt/gz_cmake_vendor \
+        /opt/ros/jazzy/opt/gz_common_vendor \
+        /opt/ros/jazzy/opt/gz_fuel_tools_vendor \
+        /opt/ros/jazzy/opt/gz_gui_vendor \
+        /opt/ros/jazzy/opt/gz_rendering_vendor \
+        /opt/ros/jazzy/opt/gz_sensors_vendor \
+        /opt/ros/jazzy/opt/gz_physics_vendor \
+        /opt/ros/jazzy/opt/gz_tools_vendor \
+        /opt/ros/jazzy/opt/gz_utils_vendor \
+        /opt/ros/jazzy/opt/gz_math_vendor \
+        /opt/ros/jazzy/opt/gz_transport_vendor \
+        /opt/ros/jazzy/opt/gz_msgs_vendor \
+        /opt/ros/jazzy/opt/gz_sim_vendor \
+        /opt/ros/jazzy/opt/gz_plugin_vendor \
+        /opt/ros/jazzy/opt/sdformat_vendor; do
+        if ! grep -Fq ";${prefix}\"" "$WS/$PKG_PATH/debian/rules" && \
+          ! grep -Fq ";${prefix};" "$WS/$PKG_PATH/debian/rules" && \
+          ! grep -Fq -- "-DCMAKE_PREFIX_PATH=\"${prefix};" "$WS/$PKG_PATH/debian/rules"; then
+          sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;'"$prefix"'"|' \
+            $WS/$PKG_PATH/debian/rules
+        fi
+      done
+      # Ensure dh_shlibdeps can locate gz and sdformat vendor libs.
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_sim_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_sim_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
   "src/ros2/common_interfaces/sensor_msgs")
     # Make ros-jazzy-sensor-msgs replace the Debian ROS 1 sensor_msgs packages
     sed -i '/^Depends:/a\
@@ -184,6 +393,488 @@ Provides: libsensor-msgs-dev, python3-sensor-msgs, ros-sensor-msgs' \
     if ! grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
       sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib|' \
         $WS/$PKG_PATH/debian/rules
+    fi
+    ;;
+
+  "src/gazebo-release/gz_msgs_vendor")
+    # dpkg-shlibdeps can't find libgz-utils2 without an explicit -l path
+    if ! grep -q "/opt/ros/jazzy/opt/gz_utils_vendor/lib" "$WS/$PKG_PATH/debian/rules"; then
+      sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_utils_vendor/lib|' \
+        $WS/$PKG_PATH/debian/rules
+    fi
+    ;;
+
+  "src/gazebo-release/gz_transport_vendor")
+    # Ensure gz-msgs10 is discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "gz-msgs10_DIR" "$WS/$PKG_PATH/debian/rules"; then
+        awk '
+          /-DCMAKE_PREFIX_PATH=/ {
+            print
+            print "\t\t-Dgz-msgs10_DIR=\"/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10\" \\"
+            next
+          }
+          { print }
+        ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+        mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+      fi
+      if ! sed -n '/^override_dh_auto_build:/,/^override_/p' "$WS/$PKG_PATH/debian/rules" | grep -q "CMAKE_PREFIX_PATH="; then
+        awk '
+          /^override_dh_auto_build:/ { inbuild=1 }
+          inbuild && /^override_/ && !/^override_dh_auto_build:/ { inbuild=0 }
+          inbuild && (/setup\.sh"; fi/ || /export PYTHONPATH=/) {
+            print
+            print "\texport CMAKE_PREFIX_PATH=\"/opt/ros/jazzy/opt/gz_msgs_vendor:$${CMAKE_PREFIX_PATH}\" && \\"
+            next
+          }
+          { print }
+        ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+        mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_fuel_tools_vendor")
+    # Ensure gz-common5 and gz-msgs10 are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "gz-common5_DIR" "$WS/$PKG_PATH/debian/rules"; then
+        awk '
+          /-DCMAKE_PREFIX_PATH=/ {
+            print
+            print "\t\t-Dgz-common5_DIR=\"/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5\" \\"
+            next
+          }
+          { print }
+        ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+        mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+      fi
+      if ! grep -q "gz-msgs10_DIR" "$WS/$PKG_PATH/debian/rules"; then
+        awk '
+          /-DCMAKE_PREFIX_PATH=/ {
+            print
+            print "\t\t-Dgz-msgs10_DIR=\"/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10\" \\"
+            next
+          }
+          { print }
+        ' "$WS/$PKG_PATH/debian/rules" > "$WS/$PKG_PATH/debian/rules.new"
+        mv "$WS/$PKG_PATH/debian/rules.new" "$WS/$PKG_PATH/debian/rules"
+      fi
+      if ! grep -q "CMAKE_PREFIX_PATH=.*gz-common5-testing" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-testing"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "CMAKE_PREFIX_PATH=.*gz-msgs10" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_rendering_vendor")
+    # Ensure gz-common5, gz-plugin2, and gz_ogre_next_vendor are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-graphics" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-graphics"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-events" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-events"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-geospatial" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-geospatial"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-all" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-all"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/share/gz_ogre_next_vendor/cmake" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/share/gz_ogre_next_vendor/cmake"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_plugin_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_sensors_vendor")
+    # Ensure gz-common5, gz-msgs10, gz-rendering8, and gz-transport13 are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_rendering_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_rendering_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_transport_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor/lib/cmake/gz-rendering8" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_rendering_vendor/lib/cmake/gz-rendering8"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_rendering_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_sim_vendor" | \
+  "src/gazebo-release/gz_launch_vendor")
+    # Ensure gz-* vendor prefixes are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      for prefix in \
+        /opt/ros/jazzy/opt/gz_cmake_vendor \
+        /opt/ros/jazzy/opt/gz_common_vendor \
+        /opt/ros/jazzy/opt/gz_fuel_tools_vendor \
+        /opt/ros/jazzy/opt/gz_gui_vendor \
+        /opt/ros/jazzy/opt/gz_math_vendor \
+        /opt/ros/jazzy/opt/gz_msgs_vendor \
+        /opt/ros/jazzy/opt/gz_physics_vendor \
+        /opt/ros/jazzy/opt/gz_plugin_vendor \
+        /opt/ros/jazzy/opt/gz_rendering_vendor \
+        /opt/ros/jazzy/opt/gz_sensors_vendor \
+        /opt/ros/jazzy/opt/gz_tools_vendor \
+        /opt/ros/jazzy/opt/gz_transport_vendor \
+        /opt/ros/jazzy/opt/gz_utils_vendor \
+        /opt/ros/jazzy/opt/gz_sim_vendor \
+        /opt/ros/jazzy/opt/sdformat_vendor; do
+        if ! grep -q "$prefix" "$WS/$PKG_PATH/debian/rules"; then
+          sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:'"$prefix"'"|' \
+            $WS/$PKG_PATH/debian/rules
+          sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;'"$prefix"'"|' \
+            $WS/$PKG_PATH/debian/rules
+        fi
+      done
+
+      # Ensure dh_shlibdeps can locate gz and sdformat vendor libs.
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_rendering_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_gui_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_gui_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_sensors_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_sensors_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_plugin_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_physics_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_physics_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_sim_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_sim_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_gui_vendor")
+    # Ensure gz-common5, gz-msgs10, gz-plugin2, gz-rendering8, and gz-transport13 are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_rendering_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_rendering_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_transport_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_msgs_vendor/lib/cmake/gz-msgs10"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-loader" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-loader"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-register" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-register"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor/lib/cmake/gz-rendering8" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_rendering_vendor/lib/cmake/gz-rendering8"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_transport_vendor/lib/cmake/gz-transport13"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_msgs_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_msgs_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_plugin_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_rendering_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_rendering_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_transport_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_transport_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+    fi
+    ;;
+
+  "src/gazebo-release/gz_physics_vendor")
+    # Ensure gz-common5 and gz-plugin2 are discoverable during CMake configure
+    if [ -f "$WS/$PKG_PATH/debian/rules" ]; then
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DAMENT_PREFIX_PATH=/ s|\(-DAMENT_PREFIX_PATH="[^"]*\)"|\1:/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2" "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-graphics" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-graphics"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-geospatial" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-geospatial"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-profiler"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-testing" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_common_vendor/lib/cmake/gz-common5-testing"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! grep -q "/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-all" \
+        "$WS/$PKG_PATH/debian/rules"; then
+        sed -i '/-DCMAKE_PREFIX_PATH=/ s|\(-DCMAKE_PREFIX_PATH="[^"]*\)"|\1;/opt/ros/jazzy/opt/gz_plugin_vendor/lib/cmake/gz-plugin2-all"|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      # Ensure dh_shlibdeps can locate gz-common and sdformat vendor libs.
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/gz_common_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/gz_common_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
+      if ! sed -n '/dh_shlibdeps -l/p' "$WS/$PKG_PATH/debian/rules" | \
+        grep -q "/opt/ros/jazzy/opt/sdformat_vendor/lib"; then
+        sed -i '/dh_shlibdeps -l/ s|$|:/opt/ros/jazzy/opt/sdformat_vendor/lib|' \
+          $WS/$PKG_PATH/debian/rules
+      fi
     fi
     ;;
 

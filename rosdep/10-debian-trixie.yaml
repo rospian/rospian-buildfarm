@@ -13456,3 +13456,9 @@ state_interfaces_broadcaster:
       apt:
         packages:
           - ros-jazzy-state-interfaces-broadcaster
+
+# Missing Gazebo related system dependency mappings for Debian Trixie
+libogre-dev:
+  debian:
+    trixie:
+      - libogre-1.12-dev

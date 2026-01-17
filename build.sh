@@ -18,7 +18,6 @@ SOURCE_CHROOT="source:${SBUILD_CHROOT}"
 TARGET_PKGS=("$@")
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
-SEQUENCE="$WS/sequence"
 SEQUENCE_PATHS="$WS/sequence-paths"
 XREFERENCE="$SBUILD_DIR/xreference"
 force_build=0
@@ -368,10 +367,6 @@ EOF
           "$SBUILD_DIR/artifacts" 2>/dev/null || true
 
     build_count=$((build_count + 1))
-    # Only append to sequence if not already present
-    if ! grep -Fxq "$pkg_name" "$SEQUENCE" 2>/dev/null; then
-      echo $pkg_name >> $SEQUENCE
-    fi
     # Only append to sequence-paths if not already present
     if ! grep -Fxq "$pkg_path" "$SEQUENCE_PATHS" 2>/dev/null; then
       echo $pkg_path >> $SEQUENCE_PATHS

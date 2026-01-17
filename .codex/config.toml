@@ -38,5 +38,7 @@ allowed_commands = [
   "apt-get",
   "cmake",
   "make",
-  "git"
+  "git",
+  "python3",
+  "scripts/test_bloom_generate.sh"
 ]
