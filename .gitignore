@@ -1,7 +1,9 @@
-*/src/**
-*/sbuild/**
-*/*.build
+ros2/src/**
+ros2/sbuild/**
+!ros2/sbuild/logs/
+!ros2/sbuild/logs/*.build
+ros2/*.build
 **/log
 nohup.out
 dpkg-source.log
-**/diff/
+ros2/diff/
