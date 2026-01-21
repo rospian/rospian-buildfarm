@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Test bloom-generate + patches.sh workflow for a single ROS 2 package
+# Cleans debian/ artifacts, regenerates Debian packaging via bloom-generate,
+# applies patches.sh modifications, and optionally searches the output.
+# Used to validate patches.sh changes before running full builds.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.sh"; load_env
+
 SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(dirname "$SCRIPT_PATH")"
 REPO_ROOT="$(dirname "$REPO_ROOT")"
 WS="${WS:-$REPO_ROOT/ros2}"
-ROS_DISTRO="${ROS_DISTRO:-jazzy}"
-OS_NAME="${OS_NAME:-debian}"
-OS_VERSION="${OS_VERSION:-trixie}"
 PKG_PATH="${1:-}"
 PATTERN="${2:-}"
 
@@ -23,7 +27,7 @@ Examples:
   scripts/test_bloom_generate.sh src/gazebosim/gz-plugin 'gz-utils2_DIR'
 
 Env overrides:
-  WS, ROS_DISTRO, OS_NAME, OS_VERSION
+  WS, ROS_DISTRO, OS_NAME, OS_DIST
 EOF
 }
 
@@ -40,13 +44,13 @@ fi
 echo "== Workspace: $WS"
 echo "== Package: $PKG_PATH"
 echo "== ROS distro: $ROS_DISTRO"
-echo "== OS: $OS_NAME $OS_VERSION"
+echo "== OS: $OS_NAME $OS_DIST"
 
 rm -rf "$WS/$PKG_PATH/debian" "$WS/$PKG_PATH/.obj-"* "$WS/$PKG_PATH/.debhelper" || true
 
 (
   cd "$WS/$PKG_PATH"
-  bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name "$OS_NAME" --os-version "$OS_VERSION"
+  bloom-generate rosdebian --ros-distro "$ROS_DISTRO" --os-name "$OS_NAME" --os-version "$OS_DIST"
 )
 
 "$WS/patches.sh" "$PKG_PATH"

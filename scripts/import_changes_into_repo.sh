@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ⚠️  EMERGENCY USE ONLY ⚠️
+# This script manually imports .changes files into reprepro, bypassing normal
+# build.sh workflows. Only use this to recover from repo corruption or when
+# reimporting pre-built packages. Normal builds should use build.sh, which
+# handles reprepro inclusion automatically.
+
 # Include built .changes files into the local reprepro repo.
 # Expects artifacts under $WS/sbuild/artifacts and uses $REPO_DIST for the target distro.
 # Env overrides: ROS_SUBDIR, OS_DIST, ROS_DISTRO, REPO_DIST, APTREPO, SBUILD_DIR, ARTIFACTS_DIR.
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.sh"; load_env
+
 SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 SCRIPT_PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-ROS_SUBDIR="${ROS_SUBDIR:-ros2}"
 WS="${WS:-$SCRIPT_PARENT_DIR/$ROS_SUBDIR}"
-OS_DIST="${OS_DIST:-trixie}"
-ROS_DISTRO="${ROS_DISTRO:-jazzy}"
-REPO_DIST="${REPO_DIST:-$OS_DIST-$ROS_DISTRO}"
-APTREPO="${APTREPO:-/srv/aptrepo}"
 SBUILD_DIR="${SBUILD_DIR:-$WS/sbuild}"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-$SBUILD_DIR/artifacts}"
 

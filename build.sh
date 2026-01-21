@@ -1,26 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-ROS_SUBDIR="${ROS_SUBDIR:-ros2}"
-WS="${WS:-$SCRIPT_DIR/$ROS_SUBDIR}"
-ROS_DISTRO="${ROS_DISTRO:-jazzy}"
-OS_DIST=trixie
-REPO_DIST="$OS_DIST-$ROS_DISTRO"
-ARCH=arm64
-APTREPO="${APTREPO:-/srv/aptrepo}"
-SBUILD_RESULTS="${SBUILD_RESULTS:-$WS}"
-PARALLEL_JOBS="${PARALLEL_JOBS:-$(($(nproc) - 1))}"
-SBUILD_DIR="$WS/sbuild"
-SBUILD_CHROOT="${SBUILD_CHROOT:-trixie-arm64-sbuild}"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/.env.sh"; load_env
+
 SOURCE_CHROOT="source:${SBUILD_CHROOT}"
 TARGET_PKGS=("$@")
 mkdir -p "$SBUILD_DIR"/{logs,artifacts,stamps,built}
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
 SEQUENCE_PATHS="$WS/sequence-paths"
 XREFERENCE="$SBUILD_DIR/xreference"
-force_build=0
+
 # Always force bloom generation on first run to ensure patches are applied
 force_bloom=1
 

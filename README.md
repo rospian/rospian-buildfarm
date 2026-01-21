@@ -127,7 +127,34 @@ sudo apt update
 
 ---
 
-### 2.4 Initial export
+### 2.4 Add remote repository (optional)
+
+If you want to use a remote repository as a fallback for packages not yet built locally:
+
+```bash
+echo "deb [arch=arm64 signed-by=/usr/share/keyrings/rospian-archive-keyring.gpg] https://rospian.github.io/rospian-repo trixie-jazzy main"   | sudo tee /etc/apt/sources.list.d/rospian.list
+
+sudo apt update
+```
+
+This allows APT to pull packages from the remote repository when they're not available locally.
+
+---
+
+### 2.5 Configure APT pinning (optional)
+
+If you've configured a remote repository (section 2.4), set up APT pinning to prefer your local repository:
+
+```bash
+sudo cp apt/rospian-preferences /etc/apt/preferences.d/rospian-preferences
+sudo apt update
+```
+
+This sets pin priorities so APT prefers packages from your local repository (priority 800) over the remote repository (priority 500), while keeping the remote repository available as a fallback for packages not yet built locally.
+
+---
+
+### 2.6 Initial export
 
 ```bash
 reprepro -b /srv/aptrepo export
@@ -376,7 +403,41 @@ Use a path relative to the repository root:
 
 ---
 
-## 7. Reinitializing the repository (clean rebuild)
+## 7. Backup and restore
+
+### Backing up to S3
+
+After building packages, back up the repository to S3 for disaster recovery:
+
+```bash
+./scripts/s3_backup.sh
+```
+
+This backs up:
+- `/srv/aptrepo-pages` → `s3://rospian/aptrepo-pages/` (append-only, preserves history)
+- `/srv/aptrepo` → `s3://rospian/aptrepo/` (mirror with --delete)
+
+### Restoring from S3
+
+To restore the repository from S3 backup (e.g., after hardware failure or migration):
+
+```bash
+# Normal restore (fails if directories are non-empty)
+./scripts/s3_restore.sh
+
+# Force restore (overwrites existing content)
+FORCE=true ./scripts/s3_restore.sh
+```
+
+This restores:
+- `s3://rospian/aptrepo-pages/` → `/srv/aptrepo-pages` (git-tracked with S3 content)
+- `s3://rospian/aptrepo/` → `/srv/aptrepo` (mirrored canonical snapshot)
+
+**Requirements:** AWS CLI configured with credentials and read/write access to s3://rospian bucket.
+
+---
+
+## 8. Reinitializing the repository (clean rebuild)
 
 If you need to rebuild everything from scratch, reinitialize `/srv/aptrepo`:
 
@@ -388,7 +449,7 @@ sudo apt update
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### Package published but not visible to APT
 
@@ -440,7 +501,7 @@ librcpputils-dev
 
 ---
 
-## 9. Mental model (important)
+## 10. Mental model (important)
 
 Think in passes:
 
@@ -463,10 +524,46 @@ You now have:
 
 This is the *right* way to build ROS on Debian Trixie.
 
+---
+
+## 11. Snapshotting repository state
+
+To create reproducible builds or mark known-good states, you can snapshot the exact commit hashes of all source repositories:
+
+```bash
+./scripts/snapshot_repos.sh
+```
+
+This generates a timestamped `.repos` file in the `releases/` directory with exact commit hashes for all repositories:
+
+```
+releases/ros2.repos.20260121T143000Z.locked.yaml
+```
+
+### When to snapshot
+
+- Before major updates or structural changes
+- After successfully building a complete desktop installation
+- To create release checkpoints
+- Before experimenting with upstream changes
+
+### Restoring a snapshot
+
+To restore your workspace to a previous snapshot:
+
+```bash
+vcs import src < releases/ros2.repos.20260121T143000Z.locked.yaml
+```
+
+This ensures you can always return to a known-good state if builds break after upstream changes.
+
+---
+
 ## And what's next?
 
 If you want next steps, good follow-ons are:
 
+* Generate a release manifest
 * splitting repo into `staging → stable`
 * switching from `file:` to HTTP
 * migrating to `unshare` later

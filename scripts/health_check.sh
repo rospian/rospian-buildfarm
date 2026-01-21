@@ -5,13 +5,8 @@ set -euo pipefail
 # in the schroot, to spot missing or stale build markers.
 # Env overrides: ROS_SUBDIR.
 
-SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-SCRIPT_PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-ROS_SUBDIR="${ROS_SUBDIR:-ros2}"
-WS="${WS:-$SCRIPT_PARENT_DIR/$ROS_SUBDIR}"
-SBUILD_DIR="$WS/sbuild"
-
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.sh"; load_env
+exit
 cd "$WS"
 
 # Get list of actual built packages

@@ -2,15 +2,13 @@
 set -euo pipefail
 
 # Publish the local reprepro snapshot to GitHub Pages.
-# Assumes the apt repo is already exported in $APT_REPO and that $PUBLISH_DIR
+# Assumes the apt repo is already exported in $APTREPO and that $PAGES_DIR
 # is a working tree for the gh-pages branch (will be created/overwritten).
-# Requires git and rsync; will force-push to $REMOTE/$BRANCH.
+# Requires git and rsync; will force-push to $PAGES_GIT_URL/$PAGES_GIT_BRANCH.
 
 # ===== CONFIG =====
-APT_REPO="/srv/aptrepo"
-PUBLISH_DIR="/srv/aptrepo-pages"
-REMOTE="git@github.com:rospian/rospian-repo.git"
-BRANCH="gh-pages"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.sh"; load_env
+
 VERIFY=0
 VERIFY_ONLY=0
 
@@ -46,27 +44,27 @@ done
 
 # ===== SANITY CHECKS =====
 for d in dists pool public; do
-  if [ ! -d "$APT_REPO/$d" ]; then
-    echo "ERROR: $APT_REPO/$d does not exist"
+  if [ ! -d "$APTREPO/$d" ]; then
+    echo "ERROR: $APTREPO/$d does not exist"
     exit 1
   fi
 done
 
 # ===== PREPARE PUBLISH DIR =====
-mkdir -p "$PUBLISH_DIR"
-cd "$PUBLISH_DIR"
+mkdir -p "$PAGES_DIR"
+cd "$PAGES_DIR"
 
 if [ ! -d .git ]; then
   echo "== Initialising publish repo"
   git init
-  git checkout --orphan "$BRANCH"
-  git remote add origin "$REMOTE"
+  git checkout --orphan "$PAGES_GIT_BRANCH"
+  git remote add origin "$PAGES_GIT_URL"
 else
   git fetch origin || true
-  if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
-    git checkout "$BRANCH"
+  if git show-ref --verify --quiet "refs/heads/$PAGES_GIT_BRANCH"; then
+    git checkout "$PAGES_GIT_BRANCH"
   else
-    git checkout --orphan "$BRANCH"
+    git checkout --orphan "$PAGES_GIT_BRANCH"
   fi
 fi
 
@@ -75,7 +73,7 @@ verify_publish_snapshot() {
   local cache_dir
 
   echo "== Verifying publish snapshot"
-  for suite_dir in "$PUBLISH_DIR"/dists/*; do
+  for suite_dir in "$PAGES_DIR"/dists/*; do
     if [ ! -d "$suite_dir" ]; then
       continue
     fi
@@ -99,7 +97,7 @@ verify_publish_snapshot() {
     -o Dir::Etc::trustedparts=/dev/null \
     -o Dir::State::Lists="$list_dir" \
     -o Dir::Cache::Archives="$cache_dir" \
-    update -o Dir::Etc::sourcelist=<(echo "deb [trusted=yes] file:$PUBLISH_DIR trixie-jazzy main")
+    update -o Dir::Etc::sourcelist=<(echo "deb [trusted=yes] file:$PAGES_DIR trixie-jazzy main")
 }
 
 if [ "$VERIFY_ONLY" -eq 1 ]; then
@@ -114,16 +112,20 @@ git rm -rf . >/dev/null 2>&1 || true
 echo "== Copying APT repo snapshot"
 rsync -a --delete \
   --exclude='*dbgsym*.deb' \
-  "$APT_REPO/dists" \
-  "$APT_REPO/pool" \
-  "$APT_REPO/public" \
+  "$APTREPO/dists" \
+  "$APTREPO/public" \
+  ./
+  
+rsync -a \
+  --exclude='*dbgsym*.deb' \
+  "$APTREPO/pool" \
   ./
 
 # ===== CLEAN DEBUG SYMBOLS =====
 echo "== Removing dbgsym packages from publish snapshot"
 SIGN_WITH=""
-if [ -f "$APT_REPO/conf/distributions" ]; then
-  SIGN_WITH=$(awk -F': ' '/^SignWith:/ {print $2; exit}' "$APT_REPO/conf/distributions")
+if [ -f "$APTREPO/conf/distributions" ]; then
+  SIGN_WITH=$(awk -F': ' '/^SignWith:/ {print $2; exit}' "$APTREPO/conf/distributions")
 fi
 
 filter_dbgsym_packages() {
@@ -162,7 +164,7 @@ update_release() {
   local -a rel_files=()
 
   if [ -z "$SIGN_WITH" ]; then
-    echo "ERROR: SignWith key not found in $APT_REPO/conf/distributions" >&2
+    echo "ERROR: SignWith key not found in $APTREPO/conf/distributions" >&2
     exit 1
   fi
 
@@ -215,7 +217,7 @@ update_release() {
     -abs -o "$suite_dir/Release.gpg" "$release_file"
 }
 
-for suite_dir in "$PUBLISH_DIR"/dists/*; do
+for suite_dir in "$PAGES_DIR"/dists/*; do
   if [ ! -d "$suite_dir" ]; then
     continue
   fi
@@ -240,6 +242,6 @@ fi
 git add -A
 git commit -m "APT repo snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-git push -f origin "$BRANCH"
+git push -f origin "$PAGES_GIT_BRANCH"
 
 echo "== Publish complete"

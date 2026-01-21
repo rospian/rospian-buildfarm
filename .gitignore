@@ -1,3 +1,4 @@
+ros2/diff/**
 ros2/src/**
 ros2/sbuild/**
 !ros2/sbuild/logs/
@@ -6,4 +7,4 @@ ros2/*.build
 **/log
 nohup.out
 dpkg-source.log
-ros2/diff/
+.env.local

@@ -1,0 +1,9 @@
+# Prefer local repo generally
+Package: *
+Pin: release o=local,n=trixie-jazzy
+Pin-Priority: 800
+
+# Keep GitHub Pages available as fallback
+Package: *
+Pin: origin "rospian.github.io"
+Pin-Priority: 500
